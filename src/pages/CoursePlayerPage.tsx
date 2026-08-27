@@ -21,10 +21,22 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react'
+import { getTasksByCourse, getQuestionsByCourse, askQuestion, submitTask } from '@/services/teacher'
+import type { Task, CourseQuestion } from '@/types'
+import { ClipboardList, MessageSquare, Send, Calendar, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { toast } from '@/components/ui/use-toast'
 
 export const CoursePlayerPage: React.FC = () => {
@@ -36,8 +48,19 @@ export const CoursePlayerPage: React.FC = () => {
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0)
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [questions, setQuestions] = useState<CourseQuestion[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+
+  // Player tabs & extras
+  const [playerTab, setPlayerTab] = useState<'content' | 'tasks' | 'questions'>('content')
+  const [newQuestionText, setNewQuestionText] = useState('')
+  const [submittingQuestion, setSubmittingQuestion] = useState(false)
+  const [selectedTaskToSubmit, setSelectedTaskToSubmit] = useState<Task | null>(null)
+  const [submissionContent, setSubmissionContent] = useState('')
+  const [submissionUrl, setSubmissionUrl] = useState('')
+  const [submittingTask, setSubmittingTask] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,8 +79,17 @@ export const CoursePlayerPage: React.FC = () => {
         }
         setCourse(courseData)
 
-        const lessonsData = await getCourseLessons(courseData.id)
+        const [lessonsData, tasksData, questionsData] = await Promise.all([
+          getCourseLessons(courseData.id),
+          getTasksByCourse(courseData.id),
+          getQuestionsByCourse(
+            courseData.id,
+            user?.role === 'instructor' || user?.role === 'admin',
+          ),
+        ])
         setLessons(lessonsData)
+        setTasks(tasksData)
+        setQuestions(questionsData)
 
         let enr = await getUserEnrollment(courseData.id)
         if (!enr) {
@@ -224,10 +256,195 @@ export const CoursePlayerPage: React.FC = () => {
                 </div>
               </div>
 
-              {currentLesson.description && (
-                <p className="text-xs text-muted-foreground leading-relaxed border-t pt-3">
-                  {currentLesson.description}
-                </p>
+              {/* Player tabs: Content / Tasks / Questions */}
+              <div className="flex items-center gap-2 border-b pb-2 pt-2">
+                <button
+                  onClick={() => setPlayerTab('content')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    playerTab === 'content'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  Descrição da Aula
+                </button>
+                <button
+                  onClick={() => setPlayerTab('tasks')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    playerTab === 'tasks'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  Tarefas ({tasks.length})
+                </button>
+                <button
+                  onClick={() => setPlayerTab('questions')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                    playerTab === 'questions'
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-muted text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Dúvidas ({questions.length})
+                </button>
+              </div>
+
+              {playerTab === 'content' && (
+                <div>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {currentLesson.description ||
+                      'Assista a aula e marque como concluída para registrar seu progresso na trilha.'}
+                  </p>
+                </div>
+              )}
+
+              {playerTab === 'tasks' && (
+                <div className="space-y-3 pt-1">
+                  {tasks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4 border rounded-xl border-dashed">
+                      Nenhuma tarefa atribuída a este curso.
+                    </p>
+                  ) : (
+                    tasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="p-4 border rounded-xl bg-muted/20 space-y-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-xs text-foreground">{task.title}</h4>
+                            <Badge className="bg-[#FFC72C] text-neutral-900 text-[10px] font-bold">
+                              Nota: {task.max_grade || 10}
+                            </Badge>
+                          </div>
+                          {task.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
+                          {task.due_date && (
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Calendar className="w-3 h-3 text-primary" />
+                              Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+
+                        <Button
+                          size="sm"
+                          onClick={() => setSelectedTaskToSubmit(task)}
+                          className="bg-primary hover:bg-primary/90 text-white text-xs shrink-0 rounded-xl"
+                        >
+                          Entregar Tarefa
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {playerTab === 'questions' && (
+                <div className="space-y-3 pt-1">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault()
+                      if (!course || !newQuestionText.trim()) return
+                      setSubmittingQuestion(true)
+                      try {
+                        const created = await askQuestion({
+                          course: course.id,
+                          question: newQuestionText.trim(),
+                          is_public: true,
+                        })
+                        setQuestions((prev) => [
+                          {
+                            ...created,
+                            expand: {
+                              student: {
+                                id: user?.id || '',
+                                name: user?.name || 'Você',
+                              },
+                            },
+                          },
+                          ...prev,
+                        ])
+                        setNewQuestionText('')
+                        toast({
+                          title: 'Pergunta enviada!',
+                          description: 'O instrutor responderá sua dúvida em breve.',
+                        })
+                      } catch (err: any) {
+                        toast({ title: 'Erro ao enviar pergunta', variant: 'destructive' })
+                      } finally {
+                        setSubmittingQuestion(false)
+                      }
+                    }}
+                    className="p-3 bg-muted/40 rounded-xl border space-y-2"
+                  >
+                    <p className="text-xs font-semibold text-foreground">
+                      Tire sua dúvida com o instrutor da disciplina:
+                    </p>
+                    <Textarea
+                      placeholder="Digite sua pergunta aqui..."
+                      value={newQuestionText}
+                      onChange={(e) => setNewQuestionText(e.target.value)}
+                      className="text-xs min-h-[60px]"
+                      required
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={submittingQuestion}
+                      className="bg-primary hover:bg-primary/90 text-white text-xs font-semibold"
+                    >
+                      <Send className="w-3 h-3 mr-1" />
+                      {submittingQuestion ? 'Enviando...' : 'Enviar Pergunta'}
+                    </Button>
+                  </form>
+
+                  <div className="space-y-3 pt-2">
+                    {questions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-4">
+                        Nenhuma dúvida registrada neste curso.
+                      </p>
+                    ) : (
+                      questions.map((q) => (
+                        <div key={q.id} className="p-3 border rounded-xl bg-card space-y-2 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-foreground">
+                              {q.expand?.student?.name || 'Aluno(a)'}
+                            </span>
+                            <Badge
+                              className={
+                                q.answer
+                                  ? 'bg-green-600 text-white text-[10px]'
+                                  : 'bg-amber-600 text-white text-[10px]'
+                              }
+                            >
+                              {q.answer ? 'Respondida' : 'Aguardando'}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground whitespace-pre-line">{q.question}</p>
+
+                          {q.answer && (
+                            <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg space-y-1">
+                              <p className="font-bold text-primary flex items-center gap-1 text-[11px]">
+                                <CheckCircle2 className="w-3 h-3" /> Resposta do Professor (
+                                {q.expand?.answered_by?.name || 'Instrutor'}):
+                              </p>
+                              <p className="text-foreground/90 whitespace-pre-line leading-relaxed">
+                                {q.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* Navigation between lessons */}
@@ -309,6 +526,72 @@ export const CoursePlayerPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* MODAL: SUBMIT TASK IN PLAYER */}
+      <Dialog
+        open={!!selectedTaskToSubmit}
+        onOpenChange={(open) => !open && setSelectedTaskToSubmit(null)}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <form onSubmit={handleSendTaskSubmission}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold">
+                Entrega: {selectedTaskToSubmit?.title}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3">
+              <div className="p-3 bg-muted/40 rounded-xl space-y-1 text-xs">
+                <span className="font-semibold text-foreground">Instruções da Tarefa:</span>
+                <p className="text-muted-foreground leading-relaxed">
+                  {selectedTaskToSubmit?.description || 'Envie seu trabalho no formulário abaixo.'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">Texto da sua Resposta / Projeto</label>
+                <Textarea
+                  placeholder="Descreva suas conclusões ou desenvolvimento da atividade..."
+                  value={submissionContent}
+                  onChange={(e) => setSubmissionContent(e.target.value)}
+                  className="text-xs min-h-[100px]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">
+                  Link do Anexo / Documento (Opcional)
+                </label>
+                <Input
+                  placeholder="https://drive.google.com/... ou https://..."
+                  value={submissionUrl}
+                  onChange={(e) => setSubmissionUrl(e.target.value)}
+                  className="text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedTaskToSubmit(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submittingTask}
+                className="bg-primary hover:bg-primary/90 text-white font-semibold"
+              >
+                {submittingTask ? 'Enviando...' : 'Confirmar Entrega'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

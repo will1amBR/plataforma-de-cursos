@@ -27,10 +27,21 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter var', 'SF Pro Display', 'system-ui', 'sans-serif'],
-        display: ['SF Pro Display', 'Inter var', 'system-ui', 'sans-serif'],
+        sans: ['Raleway', 'Futura', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Raleway', 'Futura', 'sans-serif'],
+        raleway: ['Raleway', 'sans-serif'],
       },
       colors: {
+        rmhc: {
+          red: '#DA291C',
+          yellow: '#FFC72C',
+          blue: '#005A9E',
+          blueAlt: '#4872AE',
+          darkGray: '#4D4D4D',
+          darkerGray: '#333333',
+          lightGray: '#CCCCCC',
+          white: '#FFFFFF',
+        },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -43,6 +54,10 @@ export default {
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',
+        },
+        rmhcBlue: {
+          DEFAULT: 'hsl(var(--rmhc-blue))',
+          foreground: 'hsl(var(--rmhc-blue-foreground))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',

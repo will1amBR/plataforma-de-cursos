@@ -9,7 +9,23 @@ import {
   enrollInCourse,
   addReview,
 } from '@/services/courses'
-import type { Course, Lesson, Review, Enrollment } from '@/types'
+import {
+  getTasksByCourse,
+  getQuestionsByCourse,
+  askQuestion,
+  submitTask,
+  getSubmissionsByTask,
+  answerQuestion,
+} from '@/services/teacher'
+import type {
+  Course,
+  Lesson,
+  Review,
+  Enrollment,
+  Task,
+  CourseQuestion,
+  TaskSubmission,
+} from '@/types'
 import { getCourseThumbnailUrl, transformGoogleDriveUrlToEmbed } from '@/types'
 import {
   BookOpen,
@@ -26,6 +42,12 @@ import {
   User,
   ArrowRight,
   Share2,
+  ClipboardList,
+  Send,
+  ExternalLink,
+  Calendar,
+  HelpCircle,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,6 +55,15 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from '@/components/ui/use-toast'
 
@@ -44,14 +75,31 @@ export const CourseDetailsPage: React.FC = () => {
   const [course, setCourse] = useState<Course | null>(null)
   const [lessons, setLessons] = useState<Lesson[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [questions, setQuestions] = useState<CourseQuestion[]>([])
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null)
   const [loading, setLoading] = useState(true)
   const [enrolling, setEnrolling] = useState(false)
+
+  // Active section tab
+  const [activeTab, setActiveTab] = useState<'content' | 'tasks' | 'questions' | 'reviews'>(
+    'content',
+  )
 
   // Review Form
   const [userRating, setUserRating] = useState(5)
   const [userComment, setUserComment] = useState('')
   const [submittingReview, setSubmittingReview] = useState(false)
+
+  // Question Form
+  const [newQuestionText, setNewQuestionText] = useState('')
+  const [submittingQuestion, setSubmittingQuestion] = useState(false)
+
+  // Submit Task Modal
+  const [selectedTaskToSubmit, setSelectedTaskToSubmit] = useState<Task | null>(null)
+  const [submissionContent, setSubmissionContent] = useState('')
+  const [submissionUrl, setSubmissionUrl] = useState('')
+  const [submittingTask, setSubmittingTask] = useState(false)
 
   useEffect(() => {
     if (!slugOrId) return
@@ -62,12 +110,19 @@ export const CourseDetailsPage: React.FC = () => {
         const courseData = await getCourseBySlugOrId(slugOrId)
         if (courseData) {
           setCourse(courseData)
-          const [lessonsData, reviewsData] = await Promise.all([
+          const [lessonsData, reviewsData, tasksData, questionsData] = await Promise.all([
             getCourseLessons(courseData.id),
             getCourseReviews(courseData.id),
+            getTasksByCourse(courseData.id),
+            getQuestionsByCourse(
+              courseData.id,
+              user?.role === 'instructor' || user?.role === 'admin',
+            ),
           ])
           setLessons(lessonsData)
           setReviews(reviewsData)
+          setTasks(tasksData)
+          setQuestions(questionsData)
 
           if (isAuthenticated) {
             const userEnr = await getUserEnrollment(courseData.id)
@@ -113,6 +168,85 @@ export const CourseDetailsPage: React.FC = () => {
       })
     } finally {
       setEnrolling(false)
+    }
+  }
+
+  const handleAskQuestion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isAuthenticated) {
+      navigate('/auth?mode=login')
+      return
+    }
+    if (!course || !newQuestionText.trim()) return
+
+    setSubmittingQuestion(true)
+    try {
+      const created = await askQuestion({
+        course: course.id,
+        question: newQuestionText.trim(),
+        is_public: true,
+      })
+      setQuestions((prev) => [
+        {
+          ...created,
+          expand: {
+            student: {
+              id: user?.id || '',
+              name: user?.name || 'Você',
+            },
+          },
+        },
+        ...prev,
+      ])
+      setNewQuestionText('')
+      toast({
+        title: 'Pergunta enviada!',
+        description: 'O professor e a equipe pedagógica responderão em breve.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar pergunta',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmittingQuestion(false)
+    }
+  }
+
+  const handleSendTaskSubmission = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedTaskToSubmit || (!submissionContent.trim() && !submissionUrl.trim())) {
+      toast({
+        title: 'Preencha a resposta',
+        description: 'Digite o texto da sua entrega ou insira o link do anexo.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSubmittingTask(true)
+    try {
+      await submitTask({
+        task: selectedTaskToSubmit.id,
+        content: submissionContent.trim(),
+        attachment_url: submissionUrl.trim(),
+      })
+      setSelectedTaskToSubmit(null)
+      setSubmissionContent('')
+      setSubmissionUrl('')
+      toast({
+        title: 'Tarefa enviada com sucesso!',
+        description: 'Sua entrega foi gravada e enviada para o professor.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar tarefa',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmittingTask(false)
     }
   }
 
@@ -378,199 +512,507 @@ export const CourseDetailsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Details */}
+      {/* Main Content Details with Modern Tabs */}
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            {/* Detailed Description */}
-            <div className="space-y-3 bg-card border border-border/80 rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-primary" />
-                Sobre Este Curso
-              </h2>
-              <div className="text-sm text-muted-foreground leading-relaxed space-y-3 whitespace-pre-line">
-                {course.long_description ||
-                  course.description ||
-                  'Nenhum detalhe adicional informado.'}
-              </div>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center gap-2 border-b pb-3 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('content')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'content'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Aulas & Ementa ({lessons.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'tasks'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                Tarefas & Exercícios ({tasks.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('questions')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'questions'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                Dúvidas & Q&A ({questions.length})
+              </button>
+
+              <button
+                onClick={() => setActiveTab('reviews')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+                  activeTab === 'reviews'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Star className="w-3.5 h-3.5" />
+                Avaliações ({reviews.length})
+              </button>
             </div>
 
-            {/* Course Syllabus / Lessons Modules */}
-            <div className="space-y-4 bg-card border border-border/80 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
+            {/* TAB 1: CONTENT */}
+            {activeTab === 'content' && (
+              <div className="space-y-6 animate-fade-in">
+                {/* Detailed Description */}
+                <div className="space-y-3 bg-card border border-border/80 rounded-2xl p-6 shadow-sm">
                   <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-primary" />
-                    Conteúdo Programático ({lessons.length} lições)
+                    <BookOpen className="w-5 h-5 text-primary" />
+                    Sobre Este Curso
                   </h2>
-                  <p className="text-xs text-muted-foreground">Módulos e aulas sequenciais</p>
-                </div>
-              </div>
-
-              {lessons.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4">
-                  Nenhuma aula cadastrada ainda neste curso.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {Object.entries(modulesMap).map(([moduleTitle, moduleLessons], modIdx) => (
-                    <div
-                      key={modIdx}
-                      className="border border-border/70 rounded-xl overflow-hidden"
-                    >
-                      <div className="bg-muted/60 px-4 py-2.5 font-semibold text-xs text-foreground flex items-center justify-between">
-                        <span>{moduleTitle}</span>
-                        <span className="text-[11px] text-muted-foreground font-normal">
-                          {moduleLessons.length} {moduleLessons.length === 1 ? 'aula' : 'aulas'}
-                        </span>
-                      </div>
-                      <div className="divide-y divide-border/60">
-                        {moduleLessons.map((l, lIdx) => (
-                          <div
-                            key={l.id}
-                            className="p-3 px-4 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-[10px]">
-                                {l.order || lIdx + 1}
-                              </span>
-                              <div>
-                                <p className="font-semibold text-foreground">{l.title}</p>
-                                {l.description && (
-                                  <p className="text-[11px] text-muted-foreground line-clamp-1">
-                                    {l.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              {l.duration && <span>{l.duration} min</span>}
-                              {enrollment ? (
-                                <PlayCircle className="w-4 h-4 text-primary" />
-                              ) : (
-                                <Lock className="w-3.5 h-3.5" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* REVIEWS & FEEDBACK */}
-            <div className="space-y-6 bg-card border border-border/80 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                    Avaliações dos Alunos
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Média de {course.rating ? course.rating.toFixed(1) : '5.0'} baseada em{' '}
-                    {reviews.length} depoimentos
-                  </p>
-                </div>
-              </div>
-
-              {/* Add Review Box (if logged in) */}
-              {isAuthenticated ? (
-                <form
-                  onSubmit={handleReviewSubmit}
-                  className="p-4 bg-muted/40 rounded-xl border space-y-3"
-                >
-                  <p className="text-xs font-semibold text-foreground">
-                    Deixe sua avaliação sobre o curso:
-                  </p>
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        type="button"
-                        key={star}
-                        onClick={() => setUserRating(star)}
-                        className="focus:outline-none"
-                      >
-                        <Star
-                          className={`w-5 h-5 ${
-                            star <= userRating
-                              ? 'text-amber-500 fill-amber-500'
-                              : 'text-muted-foreground/30'
-                          }`}
-                        />
-                      </button>
-                    ))}
-                    <span className="text-xs font-semibold ml-2 text-amber-600">
-                      {userRating} {userRating === 1 ? 'estrela' : 'estrelas'}
-                    </span>
+                  <div className="text-sm text-muted-foreground leading-relaxed space-y-3 whitespace-pre-line">
+                    {course.long_description ||
+                      course.description ||
+                      'Nenhum detalhe adicional informado.'}
                   </div>
-                  <Textarea
-                    placeholder="Conte como foi sua experiência com este curso..."
-                    value={userComment}
-                    onChange={(e) => setUserComment(e.target.value)}
-                    className="text-xs min-h-[70px]"
-                    required
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={submittingReview}
-                    className="bg-primary hover:bg-primary/90 text-white text-xs"
-                  >
-                    {submittingReview ? 'Publicando...' : 'Publicar Avaliação'}
-                  </Button>
-                </form>
-              ) : (
-                <div className="p-4 bg-muted/30 rounded-xl text-center text-xs text-muted-foreground">
-                  <Link
-                    to="/auth?mode=login"
-                    className="text-primary font-semibold hover:underline"
-                  >
-                    Faça login
-                  </Link>{' '}
-                  para avaliar este curso.
                 </div>
-              )}
 
-              {/* Reviews List */}
-              {reviews.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2 text-center">
-                  Seja o primeiro a avaliar este curso!
-                </p>
-              ) : (
-                <div className="space-y-4 divide-y">
-                  {reviews.map((rev) => (
-                    <div key={rev.id} className="pt-4 first:pt-0 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="w-7 h-7">
-                            <AvatarImage
-                              src={`https://img.usecurling.com/ppl/medium?seed=${rev.expand?.user_id?.id || '1'}`}
-                            />
-                            <AvatarFallback>{rev.expand?.user_id?.name?.[0] || 'U'}</AvatarFallback>
-                          </Avatar>
-                          <span className="text-xs font-semibold text-foreground">
-                            {rev.expand?.user_id?.name || 'Aluno(a)'}
-                          </span>
+                {/* Course Syllabus / Lessons Modules */}
+                <div className="space-y-4 bg-card border border-border/80 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Conteúdo Programático ({lessons.length} lições)
+                      </h2>
+                      <p className="text-xs text-muted-foreground">Módulos e aulas sequenciais</p>
+                    </div>
+                  </div>
+
+                  {lessons.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4">
+                      Nenhuma aula cadastrada ainda neste curso.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {Object.entries(modulesMap).map(([moduleTitle, moduleLessons], modIdx) => (
+                        <div
+                          key={modIdx}
+                          className="border border-border/70 rounded-xl overflow-hidden"
+                        >
+                          <div className="bg-muted/60 px-4 py-2.5 font-semibold text-xs text-foreground flex items-center justify-between">
+                            <span>{moduleTitle}</span>
+                            <span className="text-[11px] text-muted-foreground font-normal">
+                              {moduleLessons.length} {moduleLessons.length === 1 ? 'aula' : 'aulas'}
+                            </span>
+                          </div>
+                          <div className="divide-y divide-border/60">
+                            {moduleLessons.map((l, lIdx) => (
+                              <div
+                                key={l.id}
+                                className="p-3 px-4 flex items-center justify-between text-xs hover:bg-muted/30 transition-colors"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="w-6 h-6 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-[10px]">
+                                    {l.order || lIdx + 1}
+                                  </span>
+                                  <div>
+                                    <p className="font-semibold text-foreground">{l.title}</p>
+                                    {l.description && (
+                                      <p className="text-[11px] text-muted-foreground line-clamp-1">
+                                        {l.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  {l.duration && <span>{l.duration} min</span>}
+                                  {enrollment ? (
+                                    <PlayCircle className="w-4 h-4 text-primary" />
+                                  ) : (
+                                    <Lock className="w-3.5 h-3.5" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center text-amber-500">
-                          {Array.from({ length: rev.rating || 5 }).map((_, i) => (
-                            <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
-                          ))}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: TASKS */}
+            {activeTab === 'tasks' && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="bg-card border rounded-2xl p-6 shadow-sm space-y-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <ClipboardList className="w-5 h-5 text-primary" />
+                      Tarefas e Atividades do Curso ({tasks.length})
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Realize as entregas para avaliação e obtenção de nota pelo professor.
+                    </p>
+                  </div>
+
+                  {tasks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-6 text-center border rounded-xl border-dashed">
+                      Nenhuma tarefa atribuída a este curso no momento.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {tasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="p-5 border rounded-2xl bg-muted/20 space-y-3 hover:border-primary/40 transition-colors"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <h3 className="font-bold text-base text-foreground">{task.title}</h3>
+                            <Badge className="bg-[#FFC72C] text-neutral-900 font-bold text-xs w-fit">
+                              Nota Máx: {task.max_grade || 10}
+                            </Badge>
+                          </div>
+
+                          {task.description && (
+                            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                              {task.description}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t text-xs text-muted-foreground">
+                            {task.due_date && (
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-3.5 h-3.5 text-primary" />
+                                Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                            {task.attachment_url && (
+                              <a
+                                href={task.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary font-semibold hover:underline flex items-center gap-1"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" /> Material de Apoio
+                              </a>
+                            )}
+
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedTaskToSubmit(task)}
+                              className="bg-primary hover:bg-primary/90 text-white text-xs font-semibold rounded-xl ml-auto"
+                            >
+                              Entregar Tarefa
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed pl-9">
-                        {rev.comment}
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: QUESTIONS (Q&A) */}
+            {activeTab === 'questions' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="bg-card border rounded-2xl p-6 shadow-sm space-y-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-primary" />
+                      Espaço de Perguntas & Respostas
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Tire dúvidas sobre as aulas diretamente com o instrutor deste curso.
+                    </p>
+                  </div>
+
+                  {/* Ask Question Form */}
+                  {isAuthenticated ? (
+                    <form
+                      onSubmit={handleAskQuestion}
+                      className="p-4 bg-muted/40 rounded-2xl border space-y-3"
+                    >
+                      <p className="text-xs font-semibold text-foreground">
+                        Faça uma pergunta sobre o conteúdo:
+                      </p>
+                      <Textarea
+                        placeholder="Digite sua dúvida de forma detalhada para o professor..."
+                        value={newQuestionText}
+                        onChange={(e) => setNewQuestionText(e.target.value)}
+                        className="text-xs min-h-[80px]"
+                        required
+                      />
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={submittingQuestion}
+                        className="bg-primary hover:bg-primary/90 text-white text-xs font-semibold"
+                      >
+                        <Send className="w-3.5 h-3.5 mr-1.5" />
+                        {submittingQuestion ? 'Enviando...' : 'Enviar Pergunta'}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="p-4 bg-muted/30 rounded-xl text-center text-xs text-muted-foreground">
+                      <Link
+                        to="/auth?mode=login"
+                        className="text-primary font-semibold hover:underline"
+                      >
+                        Faça login
+                      </Link>{' '}
+                      para enviar perguntas ao professor.
+                    </div>
+                  )}
+
+                  {/* Questions List */}
+                  {questions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-6 text-center border rounded-xl border-dashed">
+                      Nenhuma dúvida enviada até o momento. Seja o primeiro a perguntar!
+                    </p>
+                  ) : (
+                    <div className="space-y-4 pt-2">
+                      {questions.map((q) => (
+                        <div key={q.id} className="p-4 border rounded-2xl bg-card space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-7 h-7">
+                                <AvatarImage
+                                  src={`https://img.usecurling.com/ppl/thumbnail?seed=${q.expand?.student?.id || '1'}`}
+                                />
+                                <AvatarFallback>
+                                  {q.expand?.student?.name?.[0] || 'A'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-semibold text-foreground">
+                                {q.expand?.student?.name || 'Aluno(a)'}
+                              </span>
+                            </div>
+                            <Badge
+                              className={
+                                q.answer
+                                  ? 'bg-green-600 text-white text-[10px]'
+                                  : 'bg-amber-600 text-white text-[10px]'
+                              }
+                            >
+                              {q.answer ? 'Respondida' : 'Aguardando'}
+                            </Badge>
+                          </div>
+
+                          <p className="text-xs text-foreground/90 leading-relaxed whitespace-pre-line pl-9">
+                            {q.question}
+                          </p>
+
+                          {q.answer && (
+                            <div className="ml-9 p-3 bg-primary/5 border border-primary/20 rounded-xl text-xs space-y-1">
+                              <p className="font-bold text-primary flex items-center gap-1">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Resposta do Professor (
+                                {q.expand?.answered_by?.name || 'Instrutor'}):
+                              </p>
+                              <p className="text-muted-foreground whitespace-pre-line leading-relaxed">
+                                {q.answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: REVIEWS */}
+            {activeTab === 'reviews' && (
+              <div className="space-y-6 animate-fade-in">
+                <div className="space-y-6 bg-card border border-border/80 rounded-2xl p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                        <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                        Avaliações dos Alunos
+                      </h2>
+                      <p className="text-xs text-muted-foreground">
+                        Média de {course.rating ? course.rating.toFixed(1) : '5.0'} baseada em{' '}
+                        {reviews.length} depoimentos
                       </p>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Add Review Box (if logged in) */}
+                  {isAuthenticated ? (
+                    <form
+                      onSubmit={handleReviewSubmit}
+                      className="p-4 bg-muted/40 rounded-xl border space-y-3"
+                    >
+                      <p className="text-xs font-semibold text-foreground">
+                        Deixe sua avaliação sobre o curso:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            type="button"
+                            key={star}
+                            onClick={() => setUserRating(star)}
+                            className="focus:outline-none"
+                          >
+                            <Star
+                              className={`w-5 h-5 ${
+                                star <= userRating
+                                  ? 'text-amber-500 fill-amber-500'
+                                  : 'text-muted-foreground/30'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                        <span className="text-xs font-semibold ml-2 text-amber-600">
+                          {userRating} {userRating === 1 ? 'estrela' : 'estrelas'}
+                        </span>
+                      </div>
+                      <Textarea
+                        placeholder="Conte como foi sua experiência com este curso..."
+                        value={userComment}
+                        onChange={(e) => setUserComment(e.target.value)}
+                        className="text-xs min-h-[70px]"
+                        required
+                      />
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={submittingReview}
+                        className="bg-primary hover:bg-primary/90 text-white text-xs"
+                      >
+                        {submittingReview ? 'Publicando...' : 'Publicar Avaliação'}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="p-4 bg-muted/30 rounded-xl text-center text-xs text-muted-foreground">
+                      <Link
+                        to="/auth?mode=login"
+                        className="text-primary font-semibold hover:underline"
+                      >
+                        Faça login
+                      </Link>{' '}
+                      para avaliar este curso.
+                    </div>
+                  )}
+
+                  {/* Reviews List */}
+                  {reviews.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-2 text-center">
+                      Seja o primeiro a avaliar este curso!
+                    </p>
+                  ) : (
+                    <div className="space-y-4 divide-y">
+                      {reviews.map((rev) => (
+                        <div key={rev.id} className="pt-4 first:pt-0 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-7 h-7">
+                                <AvatarImage
+                                  src={`https://img.usecurling.com/ppl/medium?seed=${rev.expand?.user_id?.id || '1'}`}
+                                />
+                                <AvatarFallback>
+                                  {rev.expand?.user_id?.name?.[0] || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs font-semibold text-foreground">
+                                {rev.expand?.user_id?.name || 'Aluno(a)'}
+                              </span>
+                            </div>
+                            <div className="flex items-center text-amber-500">
+                              {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                                <Star key={i} className="w-3.5 h-3.5 fill-amber-500" />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed pl-9">
+                            {rev.comment}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* MODAL: SUBMIT TASK */}
+      <Dialog
+        open={!!selectedTaskToSubmit}
+        onOpenChange={(open) => !open && setSelectedTaskToSubmit(null)}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <form onSubmit={handleSendTaskSubmission}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold">
+                Entrega: {selectedTaskToSubmit?.title}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-3">
+              <div className="p-3 bg-muted/40 rounded-xl space-y-1 text-xs">
+                <span className="font-semibold text-foreground">Enunciado / Instruções:</span>
+                <p className="text-muted-foreground leading-relaxed">
+                  {selectedTaskToSubmit?.description || 'Envie seu trabalho no formulário abaixo.'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">Texto da sua Resposta / Projeto</label>
+                <Textarea
+                  placeholder="Descreva suas conclusões, plano ou resposta da atividade..."
+                  value={submissionContent}
+                  onChange={(e) => setSubmissionContent(e.target.value)}
+                  className="text-xs min-h-[100px]"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold">
+                  Link do Anexo / Documento (Opcional)
+                </label>
+                <Input
+                  placeholder="https://drive.google.com/... ou https://..."
+                  value={submissionUrl}
+                  onChange={(e) => setSubmissionUrl(e.target.value)}
+                  className="text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedTaskToSubmit(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={submittingTask}
+                className="bg-primary hover:bg-primary/90 text-white font-semibold"
+              >
+                {submittingTask ? 'Enviando...' : 'Confirmar Entrega'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

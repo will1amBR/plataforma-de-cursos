@@ -6,10 +6,12 @@ export interface UserRecord extends RecordModel {
   email: string
   name?: string
   avatar?: string
-  role?: 'admin' | 'moderator' | 'aluno'
+  role?: 'admin' | 'moderator' | 'instructor' | 'student' | 'aluno'
   status?: 'active' | 'blocked'
   blocked_users?: string[]
   verified?: boolean
+  bio?: string
+  specialties?: string
 }
 
 interface AuthContextType {
@@ -17,6 +19,7 @@ interface AuthContextType {
   token: string | null
   isAuthenticated: boolean
   isAdmin: boolean
+  isInstructor: boolean
   isModerator: boolean
   isLoading: boolean
   login: (email: string, pass: string) => Promise<UserRecord>
@@ -32,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   token: null,
   isAuthenticated: false,
   isAdmin: false,
+  isInstructor: false,
   isModerator: false,
   isLoading: true,
   login: async () => {
@@ -124,6 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const isAdmin = user?.role === 'admin'
+  const isInstructor = user?.role === 'instructor' || isAdmin
   const isModerator = user?.role === 'moderator' || isAdmin
   const isAuthenticated = !!user && pb.authStore.isValid
 
@@ -134,6 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isAuthenticated,
         isAdmin,
+        isInstructor,
         isModerator,
         isLoading,
         login,

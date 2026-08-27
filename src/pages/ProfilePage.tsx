@@ -2,13 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserEnrollments } from '@/services/courses'
-import {
-  getUserCertificates,
-  getUserAchievements,
-  getUserNotifications,
-  markAllNotificationsAsRead,
-} from '@/services/user'
-import type { Enrollment, Certificate, AchievementItem, NotificationItem } from '@/types'
+import { getUserCertificates, getUserAchievements, getUserNotifications } from '@/services/user'
+import { getStudentSubmissions, getStudentQuestions, submitTask } from '@/services/teacher'
+import type {
+  Enrollment,
+  Certificate,
+  AchievementItem,
+  NotificationItem,
+  TaskSubmission,
+  CourseQuestion,
+} from '@/types'
 import { getCourseThumbnailUrl } from '@/types'
 import pb from '@/lib/pocketbase/client'
 import {
@@ -27,6 +30,11 @@ import {
   ExternalLink,
   Shield,
   Save,
+  ClipboardList,
+  MessageSquare,
+  Upload,
+  Send,
+  HelpCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -49,7 +57,8 @@ export const ProfilePage: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [certificates, setCertificates] = useState<Certificate[]>([])
   const [achievements, setAchievements] = useState<AchievementItem[]>([])
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const [submissions, setSubmissions] = useState<TaskSubmission[]>([])
+  const [questions, setQuestions] = useState<CourseQuestion[]>([])
   const [loading, setLoading] = useState(true)
 
   // Edit Profile Form
@@ -76,16 +85,18 @@ export const ProfilePage: React.FC = () => {
     const loadUserData = async () => {
       setLoading(true)
       try {
-        const [enr, cert, ach, notif] = await Promise.all([
+        const [enr, cert, ach, subs, qs] = await Promise.all([
           getUserEnrollments(),
           getUserCertificates(),
           getUserAchievements(),
-          getUserNotifications(),
+          getStudentSubmissions(),
+          getStudentQuestions(),
         ])
         setEnrollments(enr)
         setCertificates(cert)
         setAchievements(ach)
-        setNotifications(notif)
+        setSubmissions(subs)
+        setQuestions(qs)
       } catch (err) {
         console.error('Error fetching profile data:', err)
       } finally {
@@ -282,22 +293,36 @@ export const ProfilePage: React.FC = () => {
 
       {/* Main Tabs Container */}
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-11 p-1 bg-muted/80 rounded-2xl">
-          <TabsTrigger value="courses" className="text-xs font-semibold gap-1.5 rounded-xl">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto p-1 bg-muted/80 rounded-2xl gap-1">
+          <TabsTrigger value="courses" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <BookOpen className="w-3.5 h-3.5" />
-            Meus Cursos ({enrollments.length})
+            Cursos ({enrollments.length})
           </TabsTrigger>
-          <TabsTrigger value="certificates" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger value="tasks" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
+            <ClipboardList className="w-3.5 h-3.5" />
+            Tarefas ({submissions.length})
+          </TabsTrigger>
+          <TabsTrigger value="questions" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
+            <MessageSquare className="w-3.5 h-3.5" />
+            Perguntas ({questions.length})
+          </TabsTrigger>
+          <TabsTrigger
+            value="certificates"
+            className="text-xs font-semibold gap-1.5 rounded-xl py-2"
+          >
             <Award className="w-3.5 h-3.5" />
             Certificados ({certificates.length})
           </TabsTrigger>
-          <TabsTrigger value="achievements" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger
+            value="achievements"
+            className="text-xs font-semibold gap-1.5 rounded-xl py-2"
+          >
             <Trophy className="w-3.5 h-3.5" />
             Conquistas ({achievements.length})
           </TabsTrigger>
-          <TabsTrigger value="settings" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger value="settings" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <Settings className="w-3.5 h-3.5" />
-            Editar Perfil & Senha
+            Perfil & Senha
           </TabsTrigger>
         </TabsList>
 
@@ -382,7 +407,148 @@ export const ProfilePage: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* TAB 2: CERTIFICADOS */}
+        {/* TAB 2: MINHAS TAREFAS */}
+        <TabsContent value="tasks" className="space-y-4">
+          {submissions.length === 0 ? (
+            <Card className="p-12 text-center border-dashed">
+              <ClipboardList className="w-12 h-12 text-primary/40 mx-auto mb-3" />
+              <h3 className="font-bold text-base">Nenhuma entrega de tarefa realizada</h3>
+              <p className="text-xs text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
+                Acesse a sala de aula de um dos seus cursos e veja a aba "Tarefas" para enviar seus
+                exercícios.
+              </p>
+              <Button asChild size="sm" className="bg-primary text-white">
+                <Link to="/courses">Ir para os Cursos</Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {submissions.map((sub) => {
+                const isGraded = sub.grade !== undefined && sub.grade !== null
+                return (
+                  <Card key={sub.id} className="border shadow-sm p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <Badge variant="outline" className="text-[10px]">
+                          {sub.expand?.task?.expand?.course?.title || 'Curso'}
+                        </Badge>
+                        <h4 className="font-bold text-sm text-foreground mt-1">
+                          {sub.expand?.task?.title || 'Tarefa do Curso'}
+                        </h4>
+                        <p className="text-[11px] text-muted-foreground">
+                          Entregue em:{' '}
+                          {sub.submitted_at
+                            ? new Date(sub.submitted_at).toLocaleDateString('pt-BR')
+                            : 'Recentemente'}
+                        </p>
+                      </div>
+                      <Badge
+                        className={
+                          isGraded
+                            ? 'bg-green-600 text-white text-xs font-bold'
+                            : 'bg-amber-600 text-white text-xs'
+                        }
+                      >
+                        {isGraded
+                          ? `Nota: ${sub.grade} / ${sub.expand?.task?.max_grade || 10}`
+                          : 'Em correção'}
+                      </Badge>
+                    </div>
+
+                    {sub.content && (
+                      <div className="p-3 bg-muted/40 rounded-xl text-xs space-y-1">
+                        <span className="font-semibold text-foreground">Sua resposta enviada:</span>
+                        <p className="text-muted-foreground line-clamp-3">{sub.content}</p>
+                      </div>
+                    )}
+
+                    {sub.attachment_url && (
+                      <div className="text-xs">
+                        <a
+                          href={sub.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          <ExternalLink className="w-3 h-3" /> Ver Link Anexado
+                        </a>
+                      </div>
+                    )}
+
+                    {isGraded && sub.feedback && (
+                      <div className="p-3 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl text-xs space-y-1">
+                        <span className="font-bold text-green-800 dark:text-green-300">
+                          Feedback do Professor:
+                        </span>
+                        <p className="text-green-700 dark:text-green-200 leading-relaxed">
+                          {sub.feedback}
+                        </p>
+                      </div>
+                    )}
+                  </Card>
+                )
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* TAB 3: MINHAS PERGUNTAS */}
+        <TabsContent value="questions" className="space-y-4">
+          {questions.length === 0 ? (
+            <Card className="p-12 text-center border-dashed">
+              <MessageSquare className="w-12 h-12 text-primary/40 mx-auto mb-3" />
+              <h3 className="font-bold text-base">Você ainda não fez perguntas nos cursos</h3>
+              <p className="text-xs text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
+                Tire dúvidas diretamente com os instrutores na aba "Perguntas" do curso ou player.
+              </p>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {questions.map((q) => (
+                <Card key={q.id} className="border shadow-sm p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <Badge variant="outline" className="text-[10px]">
+                        {q.expand?.course?.title || 'Curso'}
+                      </Badge>
+                      <p className="text-[11px] text-muted-foreground mt-1">
+                        Enviada em {new Date(q.created).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <Badge
+                      className={
+                        q.answer
+                          ? 'bg-green-600 text-white text-xs'
+                          : 'bg-red-600 text-white text-xs'
+                      }
+                    >
+                      {q.answer ? 'Respondida' : 'Aguardando Professor'}
+                    </Badge>
+                  </div>
+
+                  <div className="p-3 bg-muted/40 rounded-xl text-xs space-y-1">
+                    <p className="font-semibold text-foreground">Sua Pergunta:</p>
+                    <p className="text-muted-foreground whitespace-pre-line">{q.question}</p>
+                  </div>
+
+                  {q.answer && (
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl text-xs space-y-1">
+                      <p className="font-bold text-primary flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Resposta do Professor (
+                        {q.expand?.answered_by?.name || 'Instrutor'}):
+                      </p>
+                      <p className="text-foreground/90 whitespace-pre-line leading-relaxed">
+                        {q.answer}
+                      </p>
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* TAB 4: CERTIFICADOS */}
         <TabsContent value="certificates" className="space-y-4">
           {certificates.length === 0 ? (
             <Card className="p-12 text-center border-dashed">

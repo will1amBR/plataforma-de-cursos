@@ -136,13 +136,75 @@ export interface AchievementItem extends RecordModel {
   earned_at?: string
 }
 
+export interface Task extends RecordModel {
+  course: string
+  title: string
+  description?: string
+  due_date?: string
+  attachment_url?: string
+  max_grade?: number
+  expand?: {
+    course?: Course
+  }
+}
+
+export interface TaskSubmission extends RecordModel {
+  task: string
+  student: string
+  content?: string
+  attachment_url?: string
+  submitted_at?: string
+  grade?: number
+  feedback?: string
+  graded_at?: string
+  graded_by?: string
+  expand?: {
+    task?: Task
+    student?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+    }
+    graded_by?: {
+      id: string
+      name?: string
+      avatar?: string
+    }
+  }
+}
+
+export interface CourseQuestion extends RecordModel {
+  course: string
+  student: string
+  question: string
+  answer?: string
+  answered_by?: string
+  answered_at?: string
+  is_public?: boolean
+  expand?: {
+    course?: Course
+    student?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+    }
+    answered_by?: {
+      id: string
+      name?: string
+      avatar?: string
+    }
+  }
+}
+
 export const getCourseThumbnailUrl = (course: Course): string => {
   if (course.cover_image) {
     return pb.files.getURL(course, course.cover_image)
   }
-  // Curled high-quality educational placeholder based on course title/category
-  const encoded = encodeURIComponent(course.slug || 'education-health')
-  return `https://img.usecurling.com/p/800/450?q=education%20study&seed=${encoded}`
+  // Curled high-quality educational/family placeholder matching RMHC warmth
+  const encoded = encodeURIComponent(course.slug || 'family-healthcare')
+  return `https://img.usecurling.com/p/800/450?q=family%20health%20learning&seed=${encoded}`
 }
 
 export const transformGoogleDriveUrlToEmbed = (url?: string): string => {

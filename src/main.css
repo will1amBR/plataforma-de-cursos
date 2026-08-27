@@ -1,7 +1,7 @@
 /* Global styles - Theme, font, utilities, animations and global components */
 
-/* CHANGE THE FONT BELOW TO WHATEVER YOU WANT */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+/* RMHC Official Typography (Raleway) and Styles */
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100..900;1,100..900&family=Montserrat:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,95 +10,103 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 47% 11.2%;
+    --foreground: 0 0% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 47% 11.2%;
+    --card-foreground: 0 0% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47% 11.2%;
+    --popover-foreground: 0 0% 20%;
 
-    /* Ronald Red: #DA291C */
-    --primary: 3.8 77% 48.2%;
+    /* RMHC Red: #DA291C */
+    --primary: 3.8 77.2% 48.2%;
     --primary-foreground: 0 0% 100%;
 
-    /* Ronald Yellow / Warm Accent */
+    /* RMHC Yellow: #FFC72C */
     --secondary: 43.6 100% 58.8%;
-    --secondary-foreground: 222.2 47% 11.2%;
+    --secondary-foreground: 0 0% 15%;
 
+    /* RMHC Blue: #005A9E (Pantone 660U / Digital #4872AE / #005A9E) */
+    --rmhc-blue: 205 100% 31%;
+    --rmhc-blue-foreground: 0 0% 100%;
+
+    /* RMHC Neutral Darks: #4D4D4D / #333333 */
     --muted: 210 20% 96%;
-    --muted-foreground: 215.4 16.3% 44%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 43.6 100% 94%;
-    --accent-foreground: 25 80% 30%;
+    --accent: 43.6 100% 95%;
+    --accent-foreground: 3.8 77% 40%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 25% 90%;
-    --input: 214.3 25% 90%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
     --ring: 3.8 77% 48.2%;
 
     --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 222.2 47% 11.2%;
+    --sidebar-foreground: 0 0% 20%;
     --sidebar-primary: 3.8 77% 48.2%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 20% 94%;
-    --sidebar-accent-foreground: 222.2 47% 11.2%;
-    --sidebar-border: 214.3 25% 90%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 88%;
     --sidebar-ring: 3.8 77% 48.2%;
 
     --chart-1: 3.8 77% 48.2%;
     --chart-2: 43.6 100% 58.8%;
-    --chart-3: 152 57% 40%;
-    --chart-4: 217 91% 60%;
+    --chart-3: 205 100% 31%;
+    --chart-4: 152 57% 40%;
     --chart-5: 280 65% 60%;
   }
 
   .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 95%;
+    --background: 220 20% 10%;
+    --foreground: 0 0% 95%;
 
-    --card: 224 71% 7%;
-    --card-foreground: 213 31% 95%;
+    --card: 220 20% 13%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 224 71% 7%;
-    --popover-foreground: 213 31% 95%;
+    --popover: 220 20% 13%;
+    --popover-foreground: 0 0% 95%;
 
     --primary: 3.8 82% 56%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 43.6 100% 58.8%;
-    --secondary-foreground: 224 71% 4%;
+    --secondary-foreground: 220 20% 10%;
 
-    --muted: 223 47% 14%;
-    --muted-foreground: 215.4 16.3% 65%;
+    --rmhc-blue: 205 90% 55%;
+    --rmhc-blue-foreground: 0 0% 100%;
 
-    --accent: 223 47% 16%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 220 15% 18%;
+    --muted-foreground: 0 0% 70%;
+
+    --accent: 220 15% 20%;
+    --accent-foreground: 0 0% 98%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 223 47% 16%;
-    --input: 223 47% 16%;
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
     --ring: 3.8 82% 56%;
 
-    --sidebar-background: 224 71% 6%;
-    --sidebar-foreground: 213 31% 95%;
+    --sidebar-background: 220 20% 12%;
+    --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 3.8 82% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 223 47% 14%;
-    --sidebar-accent-foreground: 213 31% 95%;
-    --sidebar-border: 223 47% 16%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 220 15% 22%;
     --sidebar-ring: 3.8 82% 56%;
 
     --chart-1: 3.8 82% 56%;
     --chart-2: 43.6 100% 58.8%;
-    --chart-3: 152 57% 50%;
-    --chart-4: 217 91% 65%;
+    --chart-3: 205 90% 55%;
+    --chart-4: 152 57% 50%;
     --chart-5: 280 65% 65%;
   }
 

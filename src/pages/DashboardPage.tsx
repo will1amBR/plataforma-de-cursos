@@ -23,6 +23,9 @@ import {
   Briefcase,
   Megaphone,
 } from 'lucide-react'
+import { ClipboardList, MessageSquare, ArrowRight } from 'lucide-react'
+import { getStudentSubmissions } from '@/services/teacher'
+import type { TaskSubmission } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -46,6 +49,7 @@ export const DashboardPage: React.FC = () => {
   const [featuredCourses, setFeaturedCourses] = useState<Course[]>([])
   const [recommendedCourses, setRecommendedCourses] = useState<Course[]>([])
   const [myEnrollments, setMyEnrollments] = useState<Enrollment[]>([])
+  const [submissions, setSubmissions] = useState<TaskSubmission[]>([])
   const [loading, setLoading] = useState(true)
 
   // Search auto-suggestions
@@ -72,8 +76,12 @@ export const DashboardPage: React.FC = () => {
         setAllCoursesForSearch(all)
 
         if (isAuthenticated) {
-          const enrollments = await getUserEnrollments()
+          const [enrollments, subs] = await Promise.all([
+            getUserEnrollments(),
+            getStudentSubmissions(),
+          ])
           setMyEnrollments(enrollments)
+          setSubmissions(subs)
         }
       } catch (err) {
         console.error('Error loading dashboard data:', err)
