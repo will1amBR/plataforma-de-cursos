@@ -1,21 +1,21 @@
 {
-  "name": "Plataforma de Cursos Instituto Ronald",
-  "short_name": "Cursos IRM",
-  "description": "Plataforma de cursos online do Instituto Ronald McDonald",
+  "name": "Instituto Ronald McDonald - Plataforma EAD",
+  "short_name": "EAD Ronald",
+  "description": "Plataforma de Cursos Online e Capacitação do Instituto Ronald McDonald",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#e23e2e",
+  "theme_color": "#da291c",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/skip.png",
+      "src": "/pwa-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/skip.png",
+      "src": "/pwa-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
