@@ -1,34 +1,46 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, Mail, Phone, MapPin, ExternalLink } from 'lucide-react'
+import { RMHCLogo } from '@/components/RMHCLogo'
+import { Heart, ShieldCheck, Mail, ExternalLink, Globe } from 'lucide-react'
 
 export const Footer: React.FC = () => {
+  const currentYear = new Date().getFullYear()
+
   return (
-    <footer className="border-t bg-muted/40 text-muted-foreground mt-auto pb-16 md:pb-0">
-      <div className="container mx-auto px-4 py-12">
+    <footer className="bg-card border-t border-border mt-auto font-raleway">
+      {/* Top Banner with RMHC Mission */}
+      <div className="bg-[#DA291C] text-white py-4 px-4 text-center">
+        <div className="container mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 text-xs font-semibold">
+          <Heart className="w-4 h-4 fill-white" />
+          <span>
+            Ronald McDonald House Charities® • <strong>Aproximando famílias</strong> perto do
+            cuidado médico e apoio que precisam.
+          </span>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-10 md:py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Column 1: Brand & Mission */}
-          <div className="space-y-4 md:col-span-1">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#DA291C] to-[#b81d12] flex items-center justify-center shadow-sm">
-                <span className="text-[#FFC72C] font-black text-xl leading-none">M</span>
-              </div>
-              <span className="font-bold text-base text-foreground">Instituto Ronald McDonald</span>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Aproximando famílias e transformando o tratamento do câncer infantojuvenil no Brasil
-              através da educação, capacitação e apoio contínuo.
+          {/* Brand and Description */}
+          <div className="md:col-span-2 space-y-4">
+            <RMHCLogo subtitle="Plataforma de Capacitação EAD" />
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
+              A RMHC cria, encontra e apoia programas que impactam diretamente a saúde e o bem-estar
+              de crianças e suas famílias. Apoiando lares acolhedores, cuidados de saúde de
+              qualidade e formação continuada para voluntários e profissionais.
             </p>
-            <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
-              <Heart className="w-3.5 h-3.5 fill-primary" />
-              <span>Educação que salva vidas</span>
+            <div className="flex items-center gap-2 text-xs text-[#005A9E] dark:text-blue-400 font-bold">
+              <Globe className="w-4 h-4" />
+              <span>Rede Global de Capítulos RMHC</span>
             </div>
           </div>
 
-          {/* Column 2: Quick Links */}
+          {/* Quick Links */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-foreground tracking-tight">Plataforma</h4>
-            <ul className="space-y-2 text-xs">
+            <h4 className="font-bold text-xs uppercase tracking-wider text-foreground">
+              Navegação
+            </h4>
+            <ul className="space-y-2 text-xs text-muted-foreground">
               <li>
                 <Link to="/courses" className="hover:text-primary transition-colors">
                   Catálogo de Cursos
@@ -40,87 +52,56 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <Link to="/dashboard" className="hover:text-primary transition-colors">
+                  Explorar Trilhas
+                </Link>
+              </li>
+              <li>
                 <Link to="/profile" className="hover:text-primary transition-colors">
-                  Meus Certificados
+                  Área do Aluno (Minhas Tarefas)
                 </Link>
               </li>
               <li>
-                <Link to="/auth" className="hover:text-primary transition-colors">
-                  Área do Aluno
+                <Link to="/professor" className="hover:text-primary transition-colors">
+                  Área do Professor
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Institutional */}
+          {/* Institutional / Contact */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-foreground tracking-tight">Institucional</h4>
-            <ul className="space-y-2 text-xs">
-              <li>
-                <a
-                  href="https://institutoronald.org.br"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-primary transition-colors inline-flex items-center gap-1"
-                >
-                  Site Oficial RM <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://institutoronald.org.br/quem-somos/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-primary transition-colors inline-flex items-center gap-1"
-                >
-                  Quem Somos <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://institutoronald.org.br/faca-sua-doacao/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-primary transition-colors inline-flex items-center gap-1"
-                >
-                  Como Ajudar / Doações <ExternalLink className="w-3 h-3" />
-                </a>
-              </li>
-              <li>
-                <span className="text-muted-foreground">Termos de Uso & Privacidade</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 4: Contact */}
-          <div className="space-y-3">
-            <h4 className="font-semibold text-sm text-foreground tracking-tight">
-              Contato & Suporte
+            <h4 className="font-bold text-xs uppercase tracking-wider text-foreground">
+              Programas RMHC
             </h4>
-            <div className="space-y-2 text-xs">
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 shrink-0 text-primary mt-0.5" />
-                <span>Rio de Janeiro, RJ - Brasil</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 shrink-0 text-primary" />
-                <span>contato@institutoronald.org.br</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 shrink-0 text-primary" />
-                <span>(21) 3721-0000</span>
-              </div>
-            </div>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li>Casa Ronald McDonald®</li>
+              <li>Espaço da Família Ronald McDonald®</li>
+              <li>Unidade Móvel Ronald McDonald®</li>
+              <li>Capacitação & Diagnóstico Precoce</li>
+            </ul>
           </div>
         </div>
 
-        <div className="border-t border-border/60 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
-          <p>
-            © {new Date().getFullYear()} Instituto Ronald McDonald. Todos os direitos reservados.
-          </p>
-          <p className="flex items-center gap-1">
-            Plataforma de Capacitação e Ensino a Distância (EAD)
-          </p>
+        {/* Legal Disclaimer according to brand manual */}
+        <div className="border-t border-border mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+          <div className="space-y-1">
+            <p className="text-[11px] text-muted-foreground font-semibold">
+              © {currentYear} Ronald McDonald House Charities® (RMHC). Todos os direitos reservados.
+            </p>
+            <p className="text-[10px] text-muted-foreground/80 leading-relaxed max-w-3xl">
+              As seguintes marcas comerciais são de propriedade da McDonald's Corporation e suas
+              afiliadas: McDonald's, Ronald McDonald House Charities, Logo RMHC, Casa Ronald
+              McDonald, Espaço da Família Ronald McDonald e Aproximando Famílias.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-muted-foreground shrink-0">
+            <span className="flex items-center gap-1 font-semibold text-primary">
+              <ShieldCheck className="w-4 h-4" />
+              Ambiente Seguro
+            </span>
+          </div>
         </div>
       </div>
     </footer>

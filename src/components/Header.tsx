@@ -39,7 +39,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 
 export const Header: React.FC = () => {
-  const { user, isAuthenticated, isAdmin, isModerator, logout, getUserAvatarUrl } = useAuth()
+  const { user, isAuthenticated, isAdmin, isInstructor, isModerator, logout, getUserAvatarUrl } =
+    useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -96,16 +97,14 @@ export const Header: React.FC = () => {
         <Link to="/" className="flex items-center gap-3 group focus:outline-none shrink-0">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DA291C] to-[#b81d12] flex items-center justify-center shadow-md shadow-red-500/20 group-hover:scale-105 transition-transform">
             {/* Ronald Emblem M */}
-            <span className="text-[#FFC72C] font-black text-2xl leading-none select-none drop-shadow">
-              M
-            </span>
+            <span className="text-white font-bold text-xs tracking-wider">RMHC</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-base leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
-              Instituto Ronald McDonald
+            <span className="font-bold text-sm leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
+              RMHC Brasil
             </span>
-            <span className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-              Plataforma EAD
+            <span className="text-[10px] font-semibold tracking-wider text-[#005A9E] dark:text-blue-400">
+              Aproximando famílias
             </span>
           </div>
         </Link>
@@ -140,21 +139,32 @@ export const Header: React.FC = () => {
               Meus Cursos
             </Link>
           )}
+          {(isInstructor || isAdmin) && (
+            <Link
+              to="/professor"
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                isActive('/professor')
+                  ? 'text-primary font-bold'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4 text-primary" />
+              Área do Professor
+            </Link>
+          )}
+
           {isAdmin && (
             <Link
               to="/admin"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
-                location.pathname.startsWith('/admin')
-                  ? 'text-white bg-primary font-semibold shadow-sm'
-                  : 'text-primary hover:bg-primary/10'
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                isActive('/admin') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <ShieldAlert className="w-4 h-4" />
-              <span>Painel Admin</span>
+              <Shield className="w-4 h-4 text-primary" />
+              Painel Admin
             </Link>
           )}
         </nav>
-
         {/* Search Bar (Desktop) */}
         <form
           onSubmit={handleSearch}

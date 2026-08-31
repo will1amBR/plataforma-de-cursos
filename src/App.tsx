@@ -16,6 +16,7 @@ import { CoursePlayerPage } from '@/pages/CoursePlayerPage'
 import { ForumPage } from '@/pages/ForumPage'
 import { ForumTopicDetailPage } from '@/pages/ForumTopicDetailPage'
 import { ProfilePage } from '@/pages/ProfilePage'
+import { TeacherPage } from '@/pages/TeacherPage'
 import { AdminPage } from '@/pages/AdminPage'
 
 const App = () => (
@@ -35,6 +36,8 @@ const App = () => (
               <Route path="/forum" element={<ForumPage />} />
               <Route path="/forum/:id" element={<ForumTopicDetailPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/professor" element={<TeacherPage />} />
+              <Route path="/instrutor" element={<TeacherPage />} />
               <Route path="/admin" element={<AdminPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
