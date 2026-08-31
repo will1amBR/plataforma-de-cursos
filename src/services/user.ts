@@ -8,7 +8,7 @@ export const getUserCertificates = async (): Promise<Certificate[]> => {
   try {
     return await pb.collection('certificates').getFullList<Certificate>({
       filter: `user_id = "${currentUserId}"`,
-      sort: '-issued_at',
+      sort: '-created',
       expand: 'course_id',
     })
   } catch (err) {

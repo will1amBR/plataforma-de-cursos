@@ -35,6 +35,10 @@ import {
   Upload,
   Send,
   HelpCircle,
+  AlertCircle,
+  Lock,
+  XCircle,
+  FileCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -281,7 +285,9 @@ export const ProfilePage: React.FC = () => {
             <p className="text-[10px] text-neutral-300 font-semibold uppercase">Cursos</p>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-2xl p-3 border border-white/10 min-w-[90px]">
-            <p className="text-xl font-extrabold text-[#FFC72C]">{certificates.length}</p>
+            <p className="text-xl font-extrabold text-[#FFC72C]">
+              {certificates.filter((c) => c.status === 'approved').length}
+            </p>
             <p className="text-[10px] text-neutral-300 font-semibold uppercase">Certificados</p>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-2xl p-3 border border-white/10 min-w-[90px]">
@@ -548,62 +554,148 @@ export const ProfilePage: React.FC = () => {
           )}
         </TabsContent>
 
-        {/* TAB 4: CERTIFICADOS */}
+        {/* TAB 4: CERTIFICADOS COM STATUS DE APROVAÇÃO */}
         <TabsContent value="certificates" className="space-y-4">
           {certificates.length === 0 ? (
             <Card className="p-12 text-center border-dashed">
               <div className="w-12 h-12 bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-400 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Award className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-base">Nenhum certificado emitido ainda</h3>
+              <h3 className="font-bold text-base">Nenhum certificado registrado ainda</h3>
               <p className="text-xs text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
-                Conclua todas as lições de um curso para liberar seu certificado com código de
-                autenticidade oficial.
+                Conclua 100% das aulas de um curso para solicitar a emissão do seu certificado
+                oficial com chancela do Instituto Ronald McDonald.
               </p>
+              <Button asChild size="sm" className="bg-primary hover:bg-primary/90 text-white">
+                <Link to="/courses">Explorar Cursos Disponíveis</Link>
+              </Button>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {certificates.map((cert) => (
-                <Card
-                  key={cert.id}
-                  className="border-border/80 shadow-sm hover:shadow-md transition-all"
-                >
-                  <CardContent className="p-5 space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <Badge className="bg-amber-500 hover:bg-amber-500 text-neutral-900 font-bold text-[10px] gap-1">
-                          <Award className="w-3 h-3" /> Certificado Oficial
-                        </Badge>
-                        <h4 className="font-bold text-base text-foreground pt-1">
-                          {cert.expand?.course_id?.title || 'Curso Concluído'}
-                        </h4>
-                        <p className="text-xs text-muted-foreground">
-                          Emitido em:{' '}
-                          {cert.issued_at
-                            ? new Date(cert.issued_at).toLocaleDateString('pt-BR')
-                            : new Date().toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center shrink-0">
-                        <Award className="w-6 h-6" />
-                      </div>
-                    </div>
+              {certificates.map((cert) => {
+                const isPending = cert.status === 'pending' || !cert.status
+                const isApproved = cert.status === 'approved'
+                const isRejected = cert.status === 'rejected'
 
-                    <div className="p-2.5 bg-muted/60 rounded-xl flex items-center justify-between text-xs font-mono">
-                      <span className="text-muted-foreground">Código:</span>
-                      <span className="font-bold text-primary">{cert.code}</span>
-                    </div>
+                return (
+                  <Card
+                    key={cert.id}
+                    className={`border shadow-sm hover:shadow-md transition-all overflow-hidden ${
+                      isApproved
+                        ? 'border-green-300 dark:border-green-900/60'
+                        : isPending
+                          ? 'border-amber-300 dark:border-amber-900/60'
+                          : 'border-red-300 dark:border-red-900/60'
+                    }`}
+                  >
+                    <CardContent className="p-5 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          {isApproved && (
+                            <Badge className="bg-green-600 hover:bg-green-600 text-white font-bold text-[10px] gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Aprovado pelo Instituto
+                            </Badge>
+                          )}
+                          {isPending && (
+                            <Badge className="bg-amber-500 hover:bg-amber-500 text-neutral-900 font-bold text-[10px] gap-1">
+                              <Clock className="w-3 h-3" /> Em Análise / Pendente
+                            </Badge>
+                          )}
+                          {isRejected && (
+                            <Badge className="bg-red-600 hover:bg-red-600 text-white font-bold text-[10px] gap-1">
+                              <XCircle className="w-3 h-3" /> Requer Revisão
+                            </Badge>
+                          )}
 
-                    <Button
-                      onClick={() => handlePrintCertificate(cert)}
-                      className="w-full bg-[#DA291C] hover:bg-[#b81d12] text-white text-xs font-semibold rounded-xl"
-                    >
-                      <Download className="w-3.5 h-3.5 mr-1.5" />
-                      Visualizar / Imprimir Certificado
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+                          <h4 className="font-bold text-base text-foreground pt-1 leading-snug">
+                            {cert.expand?.course_id?.title || 'Curso Concluído'}
+                          </h4>
+
+                          <p className="text-xs text-muted-foreground">
+                            {isApproved && cert.issued_at
+                              ? `Emitido em ${new Date(cert.issued_at).toLocaleDateString('pt-BR')}`
+                              : cert.requested_at
+                                ? `Solicitado em ${new Date(cert.requested_at).toLocaleDateString('pt-BR')}`
+                                : `Registrado em ${new Date(cert.created).toLocaleDateString('pt-BR')}`}
+                          </p>
+                        </div>
+
+                        <div
+                          className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+                            isApproved
+                              ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'
+                              : isPending
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                : 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
+                          }`}
+                        >
+                          <Award className="w-6 h-6" />
+                        </div>
+                      </div>
+
+                      {/* Status Information Box */}
+                      {isPending && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs space-y-1">
+                          <p className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5" /> Aguardando aprovação da coordenação
+                          </p>
+                          <p className="text-amber-700 dark:text-amber-400 text-[11px] leading-relaxed">
+                            A equipe do Instituto Ronald McDonald está revisando a conclusão do seu
+                            curso. O download será liberado automaticamente após aprovação.
+                          </p>
+                        </div>
+                      )}
+
+                      {isRejected && (
+                        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs space-y-1">
+                          <p className="font-bold text-red-900 dark:text-red-300 flex items-center gap-1.5">
+                            <AlertCircle className="w-3.5 h-3.5" /> Observação do Instituto:
+                          </p>
+                          <p className="text-red-700 dark:text-red-400 text-[11px] leading-relaxed">
+                            {cert.rejection_reason ||
+                              'Por favor, revise as aulas ou entregas pendentes para reavaliação.'}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Code block (only if approved) */}
+                      {isApproved ? (
+                        <div className="p-2.5 bg-muted/60 rounded-xl flex items-center justify-between text-xs font-mono">
+                          <span className="text-muted-foreground">Autenticidade:</span>
+                          <span className="font-bold text-primary">{cert.code}</span>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 bg-muted/40 rounded-xl flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Lock className="w-3.5 h-3.5" /> Código de Autenticidade
+                          </span>
+                          <span className="italic text-[11px]">Gerado após aprovação</span>
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      {isApproved ? (
+                        <Button
+                          onClick={() => handlePrintCertificate(cert)}
+                          className="w-full bg-[#DA291C] hover:bg-[#b81d12] text-white text-xs font-semibold rounded-xl shadow-md"
+                        >
+                          <Download className="w-3.5 h-3.5 mr-1.5" />
+                          Visualizar / Baixar Certificado Oficial
+                        </Button>
+                      ) : (
+                        <Button
+                          disabled
+                          variant="outline"
+                          className="w-full text-xs font-semibold rounded-xl opacity-60 cursor-not-allowed"
+                        >
+                          <Lock className="w-3.5 h-3.5 mr-1.5" />
+                          {isPending ? 'Download Bloqueado (Em Análise)' : 'Download Indisponível'}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>

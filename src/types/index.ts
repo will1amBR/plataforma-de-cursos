@@ -113,9 +113,25 @@ export interface Certificate extends RecordModel {
   user_id: string
   course_id: string
   code: string
+  status?: 'pending' | 'approved' | 'rejected'
   issued_at?: string
+  requested_at?: string
+  approved_at?: string
+  approved_by?: string
+  rejection_reason?: string
   expand?: {
     course_id?: Course
+    user_id?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+    }
+    approved_by?: {
+      id: string
+      name?: string
+      email?: string
+    }
   }
 }
 

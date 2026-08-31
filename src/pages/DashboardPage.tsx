@@ -22,8 +22,9 @@ import {
   Leaf,
   Briefcase,
   Megaphone,
+  ClipboardList,
+  MessageSquare,
 } from 'lucide-react'
-import { ClipboardList, MessageSquare, ArrowRight } from 'lucide-react'
 import { getStudentSubmissions } from '@/services/teacher'
 import type { TaskSubmission } from '@/types'
 import { Button } from '@/components/ui/button'

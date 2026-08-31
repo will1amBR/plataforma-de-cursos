@@ -177,24 +177,45 @@ export const updateLessonProgress = async (
 
   const updated = await pb.collection('enrollments').update<Enrollment>(enrollmentId, updateData)
 
-  // If newly completed, generate certificate if not exists
+  // If newly completed, request certificate (status: pending) if not exists
   if (isCompleted && current.status !== 'completed') {
     try {
-      const code = `IRM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
-      await pb.collection('certificates').create({
-        user_id: current.user_id,
-        course_id: current.course_id,
-        code,
-        issued_at: new Date().toISOString(),
+      // Check if already requested or exists
+      const existingCerts = await pb.collection('certificates').getList(1, 1, {
+        filter: `user_id = "${current.user_id}" && course_id = "${current.course_id}"`,
       })
-      // Also add achievement
-      await pb.collection('achievements').create({
-        user_id: current.user_id,
-        title: 'Curso Concluído com Sucesso!',
-        description: 'Você finalizou todas as aulas deste curso.',
-        icon: 'Award',
-        earned_at: new Date().toISOString(),
-      })
+
+      if (existingCerts.totalItems === 0) {
+        const code = `IRM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+        await pb.collection('certificates').create({
+          user_id: current.user_id,
+          course_id: current.course_id,
+          code,
+          status: 'pending',
+          requested_at: new Date().toISOString(),
+        })
+
+        // Also add achievement for completing lessons
+        await pb.collection('achievements').create({
+          user_id: current.user_id,
+          title: 'Curso Concluído com Sucesso!',
+          description:
+            'Você finalizou todas as aulas deste curso. Certificado aguardando aprovação do Instituto.',
+          icon: 'Award',
+          earned_at: new Date().toISOString(),
+        })
+
+        // Notification for certificate pending
+        await pb.collection('notifications').create({
+          user_id: current.user_id,
+          type: 'certificate',
+          title: 'Certificado Solicitado!',
+          content:
+            'Você concluiu todas as aulas. Seu certificado foi enviado para aprovação do Instituto Ronald McDonald.',
+          read: false,
+          link: '/profile?tab=certificates',
+        })
+      }
     } catch (err) {
       console.warn('Certificate auto-generate error:', err)
     }

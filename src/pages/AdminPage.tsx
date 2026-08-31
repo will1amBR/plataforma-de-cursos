@@ -17,10 +17,13 @@ import {
   getAllForumCommentsAdmin,
   deleteForumTopicAdmin,
   deleteForumCommentAdmin,
+  getAllCertificatesAdmin,
+  approveCertificateAdmin,
+  rejectCertificateAdmin,
   type AdminStats,
 } from '@/services/admin'
 import { getCategories } from '@/services/courses'
-import type { Course, Lesson, Category, ForumTopic, ForumComment } from '@/types'
+import type { Course, Lesson, Category, ForumTopic, ForumComment, Certificate } from '@/types'
 import {
   ShieldAlert,
   Users,
@@ -41,6 +44,9 @@ import {
   FileText,
   BarChart3,
   ExternalLink,
+  Clock,
+  AlertCircle,
+  FileCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -77,7 +83,14 @@ export const AdminPage: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([])
   const [forumTopics, setForumTopics] = useState<ForumTopic[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [certificates, setCertificates] = useState<Certificate[]>([])
+  const [certFilter, setCertFilter] = useState<string>('all')
   const [loading, setLoading] = useState(true)
+
+  // Certificate rejection modal
+  const [selectedCertToReject, setSelectedCertToReject] = useState<Certificate | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [processingCertId, setProcessingCertId] = useState<string | null>(null)
 
   // Selected course for lesson filter
   const [selectedCourseForLessons, setSelectedCourseForLessons] = useState<string>('all')
@@ -133,7 +146,7 @@ export const AdminPage: React.FC = () => {
   const loadAllAdminData = async () => {
     setLoading(true)
     try {
-      const [statsData, coursesData, lessonsData, usersData, topicsData, catsData] =
+      const [statsData, coursesData, lessonsData, usersData, topicsData, catsData, certsData] =
         await Promise.all([
           getAdminStats(),
           getAllCoursesAdmin(),
@@ -141,6 +154,7 @@ export const AdminPage: React.FC = () => {
           getAllUsersAdmin(),
           getAllForumTopicsAdmin(),
           getCategories(),
+          getAllCertificatesAdmin(),
         ])
       setStats(statsData)
       setCourses(coursesData)
@@ -148,10 +162,80 @@ export const AdminPage: React.FC = () => {
       setUsers(usersData)
       setForumTopics(topicsData)
       setCategories(catsData)
+      setCertificates(certsData)
     } catch (err) {
       console.error('Error loading admin data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // CERTIFICATE APPROVAL ACTIONS
+  const handleApproveCertificate = async (cert: Certificate) => {
+    setProcessingCertId(cert.id)
+    try {
+      await approveCertificateAdmin(
+        cert.id,
+        cert.user_id,
+        cert.expand?.course_id?.title || 'Curso RMHC',
+      )
+      toast({
+        title: 'Certificado Aprovado!',
+        description: 'O certificado foi emitido e enviado automaticamente ao aluno.',
+      })
+      await loadAllAdminData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao aprovar certificado',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setProcessingCertId(null)
+    }
+  }
+
+  const handleOpenRejectDialog = (cert: Certificate) => {
+    setSelectedCertToReject(cert)
+    setRejectionReason('')
+  }
+
+  const handleConfirmReject = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedCertToReject) return
+
+    if (!rejectionReason.trim()) {
+      toast({
+        title: 'Informe a justificativa',
+        description: 'É necessário fornecer um motivo para a recusa do certificado.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setProcessingCertId(selectedCertToReject.id)
+    try {
+      await rejectCertificateAdmin(
+        selectedCertToReject.id,
+        selectedCertToReject.user_id,
+        rejectionReason,
+        selectedCertToReject.expand?.course_id?.title || 'Curso RMHC',
+      )
+      toast({
+        title: 'Certificado Rejeitado',
+        description: 'O status foi atualizado e o aluno foi notificado com as orientações.',
+      })
+      setSelectedCertToReject(null)
+      setRejectionReason('')
+      await loadAllAdminData()
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao rejeitar certificado',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setProcessingCertId(null)
     }
   }
 
@@ -336,6 +420,18 @@ export const AdminPage: React.FC = () => {
       ? lessons
       : lessons.filter((l) => l.course_id === selectedCourseForLessons)
 
+  const pendingCertificatesCount = certificates.filter(
+    (c) => c.status === 'pending' || !c.status,
+  ).length
+
+  const filteredCertificates =
+    certFilter === 'all'
+      ? certificates
+      : certificates.filter((c) => {
+          if (certFilter === 'pending') return c.status === 'pending' || !c.status
+          return c.status === certFilter
+        })
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center space-y-4">
@@ -365,24 +461,36 @@ export const AdminPage: React.FC = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-5 h-11 p-1 bg-muted/80 rounded-2xl">
-          <TabsTrigger value="overview" className="text-xs font-semibold gap-1.5 rounded-xl">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto p-1 bg-muted/80 rounded-2xl gap-1">
+          <TabsTrigger value="overview" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <BarChart3 className="w-3.5 h-3.5" />
             Estatísticas
           </TabsTrigger>
-          <TabsTrigger value="courses" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger
+            value="certificates"
+            className="text-xs font-semibold gap-1.5 rounded-xl py-2 relative"
+          >
+            <Award className="w-3.5 h-3.5 text-amber-500" />
+            Aprovar Certificados
+            {pendingCertificatesCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-neutral-900 font-extrabold text-[10px]">
+                {pendingCertificatesCount}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="courses" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <BookOpen className="w-3.5 h-3.5" />
             Cursos ({courses.length})
           </TabsTrigger>
-          <TabsTrigger value="lessons" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger value="lessons" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <Layers className="w-3.5 h-3.5" />
             Lições ({lessons.length})
           </TabsTrigger>
-          <TabsTrigger value="users" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger value="users" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <Users className="w-3.5 h-3.5" />
             Usuários ({users.length})
           </TabsTrigger>
-          <TabsTrigger value="moderation" className="text-xs font-semibold gap-1.5 rounded-xl">
+          <TabsTrigger value="moderation" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <MessageSquare className="w-3.5 h-3.5" />
             Moderação ({forumTopics.length})
           </TabsTrigger>
@@ -424,12 +532,13 @@ export const AdminPage: React.FC = () => {
 
             <Card className="border shadow-sm p-5 space-y-2">
               <div className="flex items-center justify-between text-muted-foreground">
-                <span className="text-xs font-medium">Certificados Emitidos</span>
+                <span className="text-xs font-medium">Certificados</span>
                 <Award className="w-4 h-4 text-amber-500" />
               </div>
               <p className="text-3xl font-black text-foreground">{stats?.totalCertificates || 0}</p>
-              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
-                Conclusões validadas
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold flex items-center gap-1">
+                <Clock className="w-3 h-3" /> {stats?.pendingCertificates || 0} pendentes de
+                aprovação
               </p>
             </Card>
           </div>
@@ -483,6 +592,216 @@ export const AdminPage: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        {/* TAB 1.5: CERTIFICATES APPROVAL AREA */}
+        <TabsContent value="certificates" className="space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Award className="w-5 h-5 text-amber-500" />
+                Área de Aprovação de Certificados pelo Instituto
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Revise os alunos que concluíram 100% da capacitação e aprove a emissão do
+                certificado oficial do Instituto Ronald McDonald.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-semibold text-muted-foreground">
+                Filtrar por Status:
+              </Label>
+              <Select value={certFilter} onValueChange={setCertFilter}>
+                <SelectTrigger className="text-xs w-44 rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos ({certificates.length})</SelectItem>
+                  <SelectItem value="pending">
+                    Pendentes (
+                    {certificates.filter((c) => c.status === 'pending' || !c.status).length})
+                  </SelectItem>
+                  <SelectItem value="approved">
+                    Aprovados ({certificates.filter((c) => c.status === 'approved').length})
+                  </SelectItem>
+                  <SelectItem value="rejected">
+                    Rejeitados ({certificates.filter((c) => c.status === 'rejected').length})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Pending notification banner */}
+          {pendingCertificatesCount > 0 && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500 text-neutral-900 flex items-center justify-center font-bold shrink-0">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-amber-900 dark:text-amber-300">
+                    {pendingCertificatesCount}{' '}
+                    {pendingCertificatesCount === 1
+                      ? 'certificado aguarda'
+                      : 'certificados aguardam'}{' '}
+                    sua aprovação
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-400 text-[11px]">
+                    Ao aprovar, o documento é validado e enviado automaticamente ao perfil e
+                    notificações do aluno.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="border rounded-2xl overflow-hidden bg-card shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-muted/60 text-muted-foreground uppercase font-semibold border-b">
+                  <tr>
+                    <th className="p-3.5">Aluno</th>
+                    <th className="p-3.5">Curso Concluído</th>
+                    <th className="p-3.5">Código / Autenticidade</th>
+                    <th className="p-3.5">Data Solicitação</th>
+                    <th className="p-3.5">Status</th>
+                    <th className="p-3.5 text-right">Ações do Instituto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {filteredCertificates.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        Nenhum certificado encontrado para o filtro selecionado.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCertificates.map((cert) => {
+                      const isPending = cert.status === 'pending' || !cert.status
+                      const isApproved = cert.status === 'approved'
+                      const isRejected = cert.status === 'rejected'
+                      const isProcessing = processingCertId === cert.id
+
+                      return (
+                        <tr key={cert.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="p-3.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-[10px] shrink-0">
+                                {cert.expand?.user_id?.name?.slice(0, 2).toUpperCase() || 'AL'}
+                              </div>
+                              <div>
+                                <p className="font-bold text-foreground">
+                                  {cert.expand?.user_id?.name || 'Aluno(a)'}
+                                </p>
+                                <p className="text-muted-foreground text-[11px]">
+                                  {cert.expand?.user_id?.email || '—'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-3.5">
+                            <p className="font-semibold text-foreground max-w-xs truncate">
+                              {cert.expand?.course_id?.title || 'Curso RMHC'}
+                            </p>
+                            <span className="text-[10px] text-muted-foreground">
+                              100% de progresso concluído
+                            </span>
+                          </td>
+
+                          <td className="p-3.5 font-mono text-[11px] text-primary font-bold">
+                            {cert.code}
+                          </td>
+
+                          <td className="p-3.5 text-muted-foreground">
+                            {cert.requested_at
+                              ? new Date(cert.requested_at).toLocaleDateString('pt-BR')
+                              : cert.created
+                                ? new Date(cert.created).toLocaleDateString('pt-BR')
+                                : '—'}
+                          </td>
+
+                          <td className="p-3.5">
+                            {isPending && (
+                              <Badge className="bg-amber-500 hover:bg-amber-500 text-neutral-900 font-bold text-[10px] gap-1">
+                                <Clock className="w-3 h-3" /> Pendente
+                              </Badge>
+                            )}
+                            {isApproved && (
+                              <Badge className="bg-green-600 hover:bg-green-600 text-white font-bold text-[10px] gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Aprovado
+                              </Badge>
+                            )}
+                            {isRejected && (
+                              <div className="space-y-1">
+                                <Badge className="bg-red-600 hover:bg-red-600 text-white font-bold text-[10px] gap-1">
+                                  <XCircle className="w-3 h-3" /> Recusado
+                                </Badge>
+                                {cert.rejection_reason && (
+                                  <p
+                                    className="text-[10px] text-red-500 line-clamp-1 max-w-[160px]"
+                                    title={cert.rejection_reason}
+                                  >
+                                    Motivo: {cert.rejection_reason}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
+                            {isPending && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  disabled={isProcessing}
+                                  onClick={() => handleApproveCertificate(cert)}
+                                  className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold h-8 px-3 rounded-lg shadow-sm"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                                  {isProcessing ? 'Aprovando...' : 'Aprovar e Enviar'}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isProcessing}
+                                  onClick={() => handleOpenRejectDialog(cert)}
+                                  className="text-red-600 border-red-200 hover:bg-red-50 dark:hover:bg-red-950/40 text-xs font-semibold h-8 px-3 rounded-lg"
+                                >
+                                  <XCircle className="w-3.5 h-3.5 mr-1" />
+                                  Rejeitar
+                                </Button>
+                              </>
+                            )}
+
+                            {isApproved && (
+                              <span className="text-[11px] text-green-700 dark:text-green-400 font-semibold inline-flex items-center gap-1">
+                                <FileCheck className="w-3.5 h-3.5" /> Liberado ao aluno
+                              </span>
+                            )}
+
+                            {isRejected && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isProcessing}
+                                onClick={() => handleApproveCertificate(cert)}
+                                className="text-green-600 hover:bg-green-50 text-xs h-8 px-2.5 rounded-lg"
+                              >
+                                Reavaliar / Aprovar
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </TabsContent>
 
@@ -908,6 +1227,66 @@ export const AdminPage: React.FC = () => {
                 className="bg-primary hover:bg-primary/90 text-white font-semibold"
               >
                 Salvar Curso
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: REJECT CERTIFICATE */}
+      <Dialog
+        open={!!selectedCertToReject}
+        onOpenChange={(open) => !open && setSelectedCertToReject(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleConfirmReject}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-red-600 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Recusar Emissão de Certificado
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-3 py-3 text-xs">
+              <p className="text-muted-foreground">
+                Você está recusando o certificado do aluno{' '}
+                <strong>{selectedCertToReject?.expand?.user_id?.name || 'Aluno'}</strong> para o
+                curso <strong>{selectedCertToReject?.expand?.course_id?.title}</strong>.
+              </p>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  Justificativa / Motivo da Recusa (visível para o aluno):
+                </Label>
+                <Textarea
+                  placeholder="Ex: É necessário revisar a tarefa prática do Módulo 2 antes da certificação..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  required
+                  className="text-xs min-h-[90px]"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedCertToReject(null)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                variant="destructive"
+                disabled={processingCertId === selectedCertToReject?.id}
+                className="font-semibold"
+              >
+                {processingCertId === selectedCertToReject?.id
+                  ? 'Processando...'
+                  : 'Confirmar Recusa'}
               </Button>
             </DialogFooter>
           </form>

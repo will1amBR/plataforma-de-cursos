@@ -8,6 +8,7 @@ onRecordAfterUpdateSuccess((e) => {
   const userId = e.record.getString('user_id')
   const courseId = e.record.getString('course_id')
 
+  // Check if certificate already exists or was requested
   try {
     $app.findFirstRecordByFilter('certificates', 'user_id = ? && course_id = ?', userId, courseId)
     return e.next()
@@ -21,7 +22,8 @@ onRecordAfterUpdateSuccess((e) => {
     'code',
     'IRM-' + $security.randomStringWithAlphabet(8, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'),
   )
-  cert.set('issued_at', new Date().toISOString())
+  cert.set('status', 'pending')
+  cert.set('requested_at', new Date().toISOString())
   $app.save(cert)
 
   const enrollment = $app.findRecordById('enrollments', e.record.id)
@@ -45,10 +47,15 @@ onRecordAfterUpdateSuccess((e) => {
   const notif = new Record(notifCol)
   notif.set('user_id', userId)
   notif.set('type', 'certificate')
-  notif.set('title', 'Certificado Emitido!')
-  notif.set('content', 'Você concluiu o curso ' + courseTitle + ' e recebeu seu certificado.')
+  notif.set('title', 'Certificado Solicitado para Análise')
+  notif.set(
+    'content',
+    'Você concluiu o curso ' +
+      courseTitle +
+      '. Seu certificado foi enviado para aprovação da equipe do Instituto Ronald McDonald.',
+  )
   notif.set('read', false)
-  notif.set('link', '/profile')
+  notif.set('link', '/profile?tab=certificates')
   $app.save(notif)
 
   return e.next()

@@ -13,6 +13,7 @@ import {
   MessageSquare,
   User,
   ShieldAlert,
+  Shield,
   Search,
   Bell,
   Sun,
@@ -82,6 +83,11 @@ export const Header: React.FC = () => {
     if (notif.link) {
       navigate(notif.link)
     }
+  }
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
   }
 
   const navLinks = [

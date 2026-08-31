@@ -123,6 +123,42 @@ export const CoursePlayerPage: React.FC = () => {
     return !!enrollment?.completed_lessons?.includes(lessonId)
   }
 
+  const handleSendTaskSubmission = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedTaskToSubmit || (!submissionContent.trim() && !submissionUrl.trim())) {
+      toast({
+        title: 'Preencha a resposta',
+        description: 'Digite o texto da sua entrega ou insira o link do anexo.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setSubmittingTask(true)
+    try {
+      await submitTask({
+        task: selectedTaskToSubmit.id,
+        content: submissionContent.trim(),
+        attachment_url: submissionUrl.trim(),
+      })
+      setSelectedTaskToSubmit(null)
+      setSubmissionContent('')
+      setSubmissionUrl('')
+      toast({
+        title: 'Tarefa enviada com sucesso!',
+        description: 'Sua entrega foi gravada e enviada para o professor.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar tarefa',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmittingTask(false)
+    }
+  }
+
   const handleMarkLessonComplete = async () => {
     if (!enrollment || !currentLesson) return
     setUpdating(true)
@@ -141,7 +177,8 @@ export const CoursePlayerPage: React.FC = () => {
       } else if (updated.status === 'completed') {
         toast({
           title: '🎉 Parabéns! Curso Concluído!',
-          description: 'Seu certificado já está disponível no seu perfil.',
+          description:
+            'A solicitação do seu certificado foi enviada para aprovação do Instituto Ronald McDonald.',
         })
       }
     } catch (err: any) {
@@ -191,9 +228,9 @@ export const CoursePlayerPage: React.FC = () => {
           </div>
 
           {enrollment?.status === 'completed' && (
-            <Badge className="bg-green-600 text-white text-xs gap-1 hidden sm:flex">
+            <Badge className="bg-amber-500 text-neutral-900 text-xs font-bold gap-1 hidden sm:flex">
               <Award className="w-3.5 h-3.5" />
-              Certificado Disponível
+              Curso Concluído
             </Badge>
           )}
         </div>
