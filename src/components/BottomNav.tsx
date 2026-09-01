@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { BookOpen, MessageSquare, User, Home, ShieldAlert, GraduationCap } from 'lucide-react'
+import { BookOpen, Heart, Mail, User, Home, ShieldAlert, GraduationCap } from 'lucide-react'
 
 export const BottomNav: React.FC = () => {
   const { isAuthenticated, isAdmin, isInstructor } = useAuth()
@@ -9,7 +9,8 @@ export const BottomNav: React.FC = () => {
   const navItems = [
     { label: 'Início', path: '/', icon: Home },
     { label: 'Cursos', path: '/courses', icon: BookOpen },
-    { label: 'Fórum', path: '/forum', icon: MessageSquare },
+    { label: 'Sobre', path: '/sobre', icon: Heart },
+    { label: 'Contato', path: '/contato', icon: Mail },
   ]
 
   if (isInstructor || isAdmin) {

@@ -190,6 +190,17 @@ export interface TaskSubmission extends RecordModel {
   }
 }
 
+export interface SupportTicket extends RecordModel {
+  user_id?: string
+  name?: string
+  email?: string
+  subject: string
+  description: string
+  attachment?: string
+  status?: 'new' | 'in_progress' | 'resolved'
+  response?: string
+}
+
 export interface CourseQuestion extends RecordModel {
   course: string
   student: string

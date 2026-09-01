@@ -52,13 +52,18 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/dashboard" className="hover:text-primary transition-colors">
-                  Explorar Trilhas
+                <Link to="/sobre" className="hover:text-primary transition-colors">
+                  Sobre a Instituição
+                </Link>
+              </li>
+              <li>
+                <Link to="/contato" className="hover:text-primary transition-colors">
+                  Fale Conosco
                 </Link>
               </li>
               <li>
                 <Link to="/profile" className="hover:text-primary transition-colors">
-                  Área do Aluno (Minhas Tarefas)
+                  Área do Aluno
                 </Link>
               </li>
               <li>
@@ -69,16 +74,32 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Institutional / Contact */}
+          {/* Institutional / Contact & Programs */}
           <div className="space-y-3">
             <h4 className="font-bold text-xs uppercase tracking-wider text-foreground">
-              Programas RMHC
+              Institucional & Contato
             </h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>Casa Ronald McDonald®</li>
-              <li>Espaço da Família Ronald McDonald®</li>
-              <li>Unidade Móvel Ronald McDonald®</li>
-              <li>Capacitação & Diagnóstico Precoce</li>
+              <li>
+                <Link
+                  to="/sobre"
+                  className="hover:text-primary transition-colors font-medium text-foreground"
+                >
+                  Casa Ronald McDonald Brasil
+                </Link>
+              </li>
+              <li>Tel: (21) 2176-3808</li>
+              <li>casaronald@crmbrasil.org.br</li>
+              <li>Rua da Assembleia, 100 - RJ</li>
+              <li className="pt-2 border-t border-border/60">
+                <Link
+                  to="/contato"
+                  className="inline-flex items-center gap-1 text-primary hover:underline font-bold text-[11px]"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  Envie uma mensagem
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

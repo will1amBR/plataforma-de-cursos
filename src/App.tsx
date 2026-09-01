@@ -18,6 +18,8 @@ import { ForumTopicDetailPage } from '@/pages/ForumTopicDetailPage'
 import { ProfilePage } from '@/pages/ProfilePage'
 import { TeacherPage } from '@/pages/TeacherPage'
 import { AdminPage } from '@/pages/AdminPage'
+import { AboutPage } from '@/pages/AboutPage'
+import { ContactPage } from '@/pages/ContactPage'
 
 const App = () => (
   <ThemeProvider>
@@ -35,6 +37,8 @@ const App = () => (
               <Route path="/courses/:slugOrId/learn" element={<CoursePlayerPage />} />
               <Route path="/forum" element={<ForumPage />} />
               <Route path="/forum/:id" element={<ForumTopicDetailPage />} />
+              <Route path="/sobre" element={<AboutPage />} />
+              <Route path="/contato" element={<ContactPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/professor" element={<TeacherPage />} />
               <Route path="/instrutor" element={<TeacherPage />} />

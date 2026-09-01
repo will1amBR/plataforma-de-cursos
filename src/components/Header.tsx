@@ -94,6 +94,8 @@ export const Header: React.FC = () => {
     { label: 'Início', path: '/' },
     { label: 'Cursos', path: '/courses' },
     { label: 'Fórum', path: '/forum' },
+    { label: 'Sobre', path: '/sobre' },
+    { label: 'Contato', path: '/contato' },
   ]
 
   return (
