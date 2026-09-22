@@ -127,9 +127,9 @@ export const DashboardPage: React.FC = () => {
   const currentBanner = featuredCourses[currentBannerIndex] || featuredCourses[0]
 
   return (
-    <div className="flex-1 space-y-10 pb-16">
+    <div className="flex-1 space-y-10 pb-16 w-full max-w-full overflow-x-hidden">
       {/* HERO / BANNER SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-primary/10 via-background to-background pt-8 md:pt-12 pb-6 border-b border-border/40">
+      <section className="relative w-full max-w-full overflow-hidden bg-gradient-to-b from-primary/10 via-background to-background pt-8 md:pt-12 pb-6 border-b border-border/40">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-4 mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold">

@@ -9,9 +9,9 @@ import { BottomNav } from '@/components/BottomNav'
 
 export default function Layout() {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary">
+    <div className="flex flex-col min-h-screen max-w-[100vw] overflow-x-hidden bg-background text-foreground selection:bg-primary/20 selection:text-primary">
       <Header />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col w-full overflow-x-hidden">
         <Outlet />
       </main>
       <Footer />

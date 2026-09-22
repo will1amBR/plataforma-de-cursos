@@ -13,7 +13,6 @@ import {
   BookOpen,
   MessageSquare,
   User,
-  ShieldAlert,
   Shield,
   Search,
   Bell,
@@ -22,33 +21,38 @@ import {
   LogOut,
   GraduationCap,
   Menu,
-  X,
   CheckCircle2,
   Award,
+  Home,
+  Info,
+  Mail,
+  ChevronRight,
+  LogIn,
+  UserPlus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from '@/components/ui/sheet'
+import { Separator } from '@/components/ui/separator'
 
 export const Header: React.FC = () => {
-  const { user, isAuthenticated, isAdmin, isInstructor, isModerator, logout, getUserAvatarUrl } =
-    useAuth()
+  const { user, isAuthenticated, isAdmin, isInstructor, logout, getUserAvatarUrl } = useAuth()
   const { theme, setTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -65,7 +69,7 @@ export const Header: React.FC = () => {
     e.preventDefault()
     if (searchQuery.trim()) {
       navigate(`/courses?search=${encodeURIComponent(searchQuery.trim())}`)
-      setMobileMenuOpen(false)
+      setSheetOpen(false)
     }
   }
 
@@ -92,12 +96,37 @@ export const Header: React.FC = () => {
   }
 
   const navLinks = [
-    { label: 'Início', path: '/' },
-    { label: 'Cursos', path: '/courses' },
-    { label: 'Fórum', path: '/forum' },
-    { label: 'Sobre', path: '/sobre' },
-    { label: 'Contato', path: '/contato' },
+    { label: 'Início', path: '/', icon: Home, description: 'Página inicial e destaques' },
+    {
+      label: 'Cursos',
+      path: '/courses',
+      icon: BookOpen,
+      description: 'Catálogo de formações gratuitas',
+    },
+    {
+      label: 'Fórum',
+      path: '/forum',
+      icon: MessageSquare,
+      description: 'Tire dúvidas e interaja com a comunidade',
+    },
+    {
+      label: 'Sobre',
+      path: '/sobre',
+      icon: Info,
+      description: 'Conheça o Instituto Ronald McDonald',
+    },
+    {
+      label: 'Contato',
+      path: '/contato',
+      icon: Mail,
+      description: 'Fale com nossa equipe de suporte',
+    },
   ]
+
+  const handleNavigate = (path: string) => {
+    navigate(path)
+    setSheetOpen(false)
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 transition-colors shadow-sm">
@@ -111,91 +140,16 @@ export const Header: React.FC = () => {
           <RMHCLogo variant="horizontal" size="md" subtext="Educação a Distância" />
         </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.path
-            return (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                  isActive
-                    ? 'text-primary bg-primary/10 font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-              >
-                {link.label}
-              </Link>
-            )
-          })}
-          {isAuthenticated && (
-            <Link
-              to="/profile"
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                location.pathname === '/profile'
-                  ? 'text-primary bg-primary/10 font-semibold'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              }`}
-            >
-              Meus Cursos
-            </Link>
-          )}
-          {(isInstructor || isAdmin) && (
-            <Link
-              to="/professor"
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                isActive('/professor')
-                  ? 'text-primary font-bold'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4 text-primary" />
-              Área do Professor
-            </Link>
-          )}
-
-          {isAdmin && (
-            <Link
-              to="/admin"
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                isActive('/admin') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Shield className="w-4 h-4 text-primary" />
-              Painel Admin
-            </Link>
-          )}
-        </nav>
-        {/* Search Bar (Desktop) */}
-        <form
-          onSubmit={handleSearch}
-          className="hidden lg:flex items-center relative max-w-xs w-full"
-        >
-          <Input
-            type="search"
-            placeholder="Buscar cursos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pr-8 h-9 text-sm rounded-full bg-muted/60 border-muted-foreground/20 focus-visible:ring-primary"
-          />
-          <button
-            type="submit"
-            className="absolute right-2.5 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <Search className="w-4 h-4" />
-          </button>
-        </form>
-
-        {/* Actions & User Menu */}
-        <div className="flex items-center gap-2">
+        {/* Right Section: Theme Toggle, Notifications, Auth CTA Buttons and Hamburger Menu */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Theme Switcher */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+            className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
             title="Alternar Tema Claro/Escuro"
+            aria-label="Alternar Tema Claro/Escuro"
           >
             {theme === 'dark' ? (
               <Sun className="w-4 h-4 text-amber-400" />
@@ -211,11 +165,12 @@ export const Header: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-full relative text-muted-foreground hover:text-foreground"
+                  className="h-9 w-9 rounded-full relative text-muted-foreground hover:text-foreground hover:bg-muted"
+                  aria-label="Notificações"
                 >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-background animate-pulse" />
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-[#DA291C] rounded-full ring-2 ring-background animate-pulse" />
                   )}
                 </Button>
               </PopoverTrigger>
@@ -270,148 +225,298 @@ export const Header: React.FC = () => {
             </Popover>
           )}
 
-          {/* User Avatar Dropdown or Login Button */}
+          {/* User Status / Login & Register buttons */}
           {isAuthenticated ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 p-0.5 rounded-full ring-2 ring-primary/20 hover:ring-primary transition-all focus:outline-none">
-                  <Avatar className="w-8 h-8">
-                    <AvatarImage src={getUserAvatarUrl(user)} alt={user?.name || 'Usuário'} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
-                      {user?.name?.slice(0, 2).toUpperCase() || 'RM'}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 shadow-lg">
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-semibold leading-none">{user?.name || 'Usuário'}</p>
-                    <p className="text-xs leading-none text-muted-foreground truncate">
-                      {user?.email}
-                    </p>
-                    {user?.role && (
-                      <Badge
-                        variant="outline"
-                        className="w-fit text-[10px] mt-1 capitalize border-primary/30 text-primary"
-                      >
-                        {user.role}
-                      </Badge>
-                    )}
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <User className="w-4 h-4 mr-2" />
-                  Meu Perfil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/profile?tab=courses')}>
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Meus Cursos
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate('/forum')}>
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Fórum da Comunidade
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => navigate('/admin')}
-                      className="text-primary font-medium"
-                    >
-                      <ShieldAlert className="w-4 h-4 mr-2" />
-                      Painel Administrativo
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-red-600 dark:text-red-400">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair da Conta
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <button
+              onClick={() => handleNavigate('/profile')}
+              className="flex items-center gap-2 p-0.5 rounded-full ring-2 ring-[#DA291C]/20 hover:ring-[#DA291C] transition-all focus:outline-none"
+              title="Ir para Meu Perfil"
+              aria-label="Perfil do Usuário"
+            >
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={getUserAvatarUrl(user)} alt={user?.name || 'Usuário'} />
+                <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                  {user?.name?.slice(0, 2).toUpperCase() || 'RM'}
+                </AvatarFallback>
+              </Avatar>
+            </button>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/auth?mode=login')}
-                className="text-xs md:text-sm"
+                className="text-xs sm:text-sm font-medium h-9 px-3 text-foreground hover:bg-muted"
               >
                 Entrar
               </Button>
               <Button
                 size="sm"
                 onClick={() => navigate('/auth?mode=signup')}
-                className="bg-primary hover:bg-primary/90 text-white font-medium text-xs md:text-sm shadow-sm"
+                className="bg-[#DA291C] hover:bg-[#b81d12] text-white font-semibold text-xs sm:text-sm h-9 px-3.5 sm:px-4 rounded-xl shadow-sm transition-all"
               >
                 Cadastrar
               </Button>
             </div>
           )}
 
-          {/* Mobile Menu Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden h-9 w-9"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
+          {/* Unified Hamburger Menu Trigger (clean header for both desktop and mobile) */}
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-xl border-border/80 hover:bg-primary/5 hover:border-primary/40 hover:text-primary transition-colors shrink-0"
+                aria-label="Abrir menu de navegação"
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+              {/* Sheet Header */}
+              <SheetHeader className="p-5 border-b text-left bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <SheetTitle className="text-base font-bold font-raleway flex items-center gap-2">
+                    <RMHCLogo variant="mark-only" size="sm" />
+                    <span>Navegação RMHC</span>
+                  </SheetTitle>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Plataforma de Educação a Distância do Instituto Ronald McDonald
+                </p>
+              </SheetHeader>
+
+              {/* Sheet Body with Search and Navigation Links */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                {/* Search within Drawer */}
+                <form onSubmit={handleSearch} className="relative">
+                  <Input
+                    type="search"
+                    placeholder="Buscar formações e aulas..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pr-9 h-10 text-sm rounded-xl bg-muted/50 border-border focus-visible:ring-primary"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Buscar"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                </form>
+
+                {/* User quick card inside drawer (if authenticated) */}
+                {isAuthenticated && user && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-primary/5 via-card to-card border border-primary/20 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10 ring-2 ring-primary/30">
+                        <AvatarImage src={getUserAvatarUrl(user)} alt={user.name || 'Usuário'} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                          {user.name?.slice(0, 2).toUpperCase() || 'RM'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-foreground truncate">{user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                      {user.role && (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 text-[10px] font-bold uppercase border-primary/30 text-primary"
+                        >
+                          {user.role}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Navigation Links */}
+                <div className="space-y-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                    Menu Principal
+                  </p>
+                  {navLinks.map((link) => {
+                    const active = isActive(link.path)
+                    const IconComponent = link.icon
+                    return (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        onClick={() => setSheetOpen(false)}
+                        className={`flex items-center justify-between p-3 rounded-xl transition-all group ${
+                          active
+                            ? 'bg-primary/10 text-primary font-bold'
+                            : 'text-foreground hover:bg-muted font-medium'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              active
+                                ? 'bg-primary text-white shadow-sm'
+                                : 'bg-muted group-hover:bg-primary/10 group-hover:text-primary text-muted-foreground'
+                            }`}
+                          >
+                            <IconComponent className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-sm block">{link.label}</span>
+                            <span className="text-[11px] text-muted-foreground block line-clamp-1 font-normal">
+                              {link.description}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight
+                          className={`w-4 h-4 shrink-0 transition-transform group-hover:translate-x-0.5 ${
+                            active ? 'text-primary' : 'text-muted-foreground/60'
+                          }`}
+                        />
+                      </Link>
+                    )
+                  })}
+                </div>
+
+                {/* Authenticated user specific links */}
+                {isAuthenticated && (
+                  <div className="space-y-1 pt-2">
+                    <Separator className="my-2" />
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                      Sua Área de Aprendizado
+                    </p>
+                    <Link
+                      to="/profile"
+                      onClick={() => setSheetOpen(false)}
+                      className={`flex items-center justify-between p-3 rounded-xl transition-all group ${
+                        isActive('/profile')
+                          ? 'bg-primary/10 text-primary font-bold'
+                          : 'text-foreground hover:bg-muted font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-muted group-hover:bg-primary/10 group-hover:text-primary text-muted-foreground flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-sm block">Meu Perfil & Certificados</span>
+                          <span className="text-[11px] text-muted-foreground block font-normal">
+                            Acompanhe cursos, conquistas e certificados
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                  </div>
+                )}
+
+                {/* Conditional Roles: Professor & Admin */}
+                {(isInstructor || isAdmin) && (
+                  <div className="space-y-1 pt-2">
+                    <Separator className="my-2" />
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                      Gestão & Ensino
+                    </p>
+
+                    <Link
+                      to="/professor"
+                      onClick={() => setSheetOpen(false)}
+                      className={`flex items-center justify-between p-3 rounded-xl transition-all group ${
+                        isActive('/professor')
+                          ? 'bg-primary/10 text-primary font-bold'
+                          : 'text-foreground hover:bg-muted font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <GraduationCap className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-sm block font-semibold flex items-center gap-1.5">
+                            Área do Professor
+                            <Badge className="bg-[#FFC72C] hover:bg-[#FFC72C] text-neutral-950 font-bold text-[9px] px-1.5 py-0">
+                              Docente
+                            </Badge>
+                          </span>
+                          <span className="text-[11px] text-muted-foreground block font-normal">
+                            Tarefas, correções e dúvidas de alunos
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setSheetOpen(false)}
+                        className={`flex items-center justify-between p-3 rounded-xl transition-all group ${
+                          isActive('/admin')
+                            ? 'bg-primary/10 text-primary font-bold'
+                            : 'text-foreground hover:bg-muted font-medium'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-[#DA291C] text-white flex items-center justify-center shrink-0 shadow-sm">
+                            <Shield className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-sm block font-semibold text-primary flex items-center gap-1.5">
+                              Painel Admin
+                              <Badge className="bg-[#DA291C] text-white font-bold text-[9px] px-1.5 py-0">
+                                Total
+                              </Badge>
+                            </span>
+                            <span className="text-[11px] text-muted-foreground block font-normal">
+                              Cursos, usuários, relatórios e métricas
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground/60 group-hover:translate-x-0.5 transition-transform" />
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Sheet Footer with Login/Logout CTA */}
+              <div className="p-4 border-t bg-muted/10">
+                {isAuthenticated ? (
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      logout()
+                      setSheetOpen(false)
+                    }}
+                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 justify-center h-10 rounded-xl font-semibold text-xs sm:text-sm"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair da Conta
+                  </Button>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleNavigate('/auth?mode=login')}
+                      className="w-full rounded-xl text-xs sm:text-sm font-semibold"
+                    >
+                      <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                      Entrar
+                    </Button>
+                    <Button
+                      onClick={() => handleNavigate('/auth?mode=signup')}
+                      className="w-full bg-[#DA291C] hover:bg-[#b81d12] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                      Cadastrar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-background p-4 space-y-3 animate-slide-down">
-          <form onSubmit={handleSearch} className="flex items-center relative">
-            <Input
-              type="search"
-              placeholder="Buscar cursos..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-8 h-9 text-sm"
-            />
-            <button type="submit" className="absolute right-2.5 text-muted-foreground">
-              <Search className="w-4 h-4" />
-            </button>
-          </form>
-
-          <div className="flex flex-col space-y-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-              >
-                {link.label}
-              </Link>
-            ))}
-            {isAuthenticated && (
-              <Link
-                to="/profile"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-muted"
-              >
-                Meu Perfil & Certificados
-              </Link>
-            )}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/10"
-              >
-                Painel Administrativo
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   )
 }
