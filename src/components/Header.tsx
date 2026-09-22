@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { RMHCLogo } from '@/components/RMHCLogo'
 import {
   getUserNotifications,
   markNotificationAsRead,
@@ -102,19 +103,12 @@ export const Header: React.FC = () => {
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 transition-colors shadow-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
-        <Link to="/" className="flex items-center gap-3 group focus:outline-none shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#DA291C] to-[#b81d12] flex items-center justify-center shadow-md shadow-red-500/20 group-hover:scale-105 transition-transform">
-            {/* Ronald Emblem M */}
-            <span className="text-white font-bold text-xs tracking-wider">RMHC</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-sm leading-tight tracking-tight text-foreground group-hover:text-primary transition-colors">
-              RMHC Brasil
-            </span>
-            <span className="text-[10px] font-semibold tracking-wider text-[#005A9E] dark:text-blue-400">
-              Aproximando famílias
-            </span>
-          </div>
+        <Link
+          to="/"
+          className="flex items-center group focus:outline-none shrink-0"
+          aria-label="Página Inicial - Instituto Ronald McDonald"
+        >
+          <RMHCLogo variant="horizontal" size="md" subtext="Educação a Distância" />
         </Link>
 
         {/* Desktop Navigation */}

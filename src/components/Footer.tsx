@@ -23,7 +23,7 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand and Description */}
           <div className="md:col-span-2 space-y-4">
-            <RMHCLogo subtitle="Plataforma de Capacitação EAD" />
+            <RMHCLogo variant="horizontal" size="lg" subtext="Educação a Distância" />
             <p className="text-xs text-muted-foreground leading-relaxed max-w-md">
               A RMHC cria, encontra e apoia programas que impactam diretamente a saúde e o bem-estar
               de crianças e suas famílias. Apoiando lares acolhedores, cuidados de saúde de

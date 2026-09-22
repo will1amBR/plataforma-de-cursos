@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#DA291C" />
+  <g transform="translate(56, 56) scale(4.0)">
+    <!-- White circular shield for crisp visibility across devices & app stores -->
+    <circle cx="50" cy="50" r="46" fill="#FFFFFF" />
+
+    <!-- Red House Silhouette with chimney -->
+    <rect x="68" y="16" width="10" height="20" rx="1.5" fill="#DA291C" />
+    <path
+      d="M 50 12 L 14 44 L 20 44 L 20 86 C 20 87.5 21 88.5 22.5 88.5 L 77.5 88.5 C 79 88.5 80 87.5 80 86 L 80 44 L 86 44 Z"
+      fill="#DA291C"
+    />
+    <path
+      d="M 50 8.5 L 10 44 L 17 44 L 50 15 L 83 44 L 90 44 Z"
+      fill="#DA291C"
+    />
+
+    <!-- Golden Heart (#FFC72C) -->
+    <path
+      d="M 50 36 C 47.5 30, 39 29, 36 34.5 C 32.5 40.5, 36 47.5, 50 59 C 64 47.5, 67.5 40.5, 64 34.5 C 61 29, 52.5 30, 50 36 Z"
+      fill="#FFC72C"
+    />
+
+    <!-- Hands in White -->
+    <path
+      d="M 33 66 C 33 66, 37 60, 43 62 C 47 63.5, 49 67, 46 72 C 43.5 75.5, 37 77, 34 76 C 32 75.3, 31 72, 33 66 Z"
+      fill="#FFFFFF"
+    />
+    <path
+      d="M 67 66 C 67 66, 63 60, 57 62 C 53 63.5, 51 67, 54 72 C 56.5 75.5, 63 77, 66 76 C 68 75.3, 69 72, 67 66 Z"
+      fill="#FFFFFF"
+    />
+
+    <!-- Yellow dot -->
+    <circle cx="50" cy="70" r="3.2" fill="#FFC72C" />
+  </g>
+</svg>
