@@ -53,6 +53,8 @@ export const AuthPage: React.FC = () => {
     if (isAuthenticated && user) {
       if (user.role === 'admin') {
         navigate('/admin')
+      } else if (user.role === 'instructor') {
+        navigate('/professor')
       } else {
         navigate('/')
       }
@@ -72,6 +74,8 @@ export const AuthPage: React.FC = () => {
       })
       if (loggedIn.role === 'admin') {
         navigate('/admin')
+      } else if (loggedIn.role === 'instructor') {
+        navigate('/professor')
       } else {
         navigate('/')
       }

@@ -123,6 +123,44 @@ export const CoursePlayerPage: React.FC = () => {
     return !!enrollment?.completed_lessons?.includes(lessonId)
   }
 
+  const handleAskQuestion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!course || !newQuestionText.trim()) return
+    setSubmittingQuestion(true)
+    try {
+      const created = await askQuestion({
+        course: course.id,
+        question: newQuestionText.trim(),
+        is_public: true,
+      })
+      setQuestions((prev) => [
+        {
+          ...created,
+          expand: {
+            student: {
+              id: user?.id || '',
+              name: user?.name || 'Você',
+            },
+          },
+        },
+        ...prev,
+      ])
+      setNewQuestionText('')
+      toast({
+        title: 'Pergunta enviada!',
+        description: 'O instrutor responderá sua dúvida em breve.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar pergunta',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmittingQuestion(false)
+    }
+  }
+
   const handleSendTaskSubmission = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedTaskToSubmit || (!submissionContent.trim() && !submissionUrl.trim())) {
@@ -386,39 +424,7 @@ export const CoursePlayerPage: React.FC = () => {
               {playerTab === 'questions' && (
                 <div className="space-y-3 pt-1">
                   <form
-                    onSubmit={async (e) => {
-                      e.preventDefault()
-                      if (!course || !newQuestionText.trim()) return
-                      setSubmittingQuestion(true)
-                      try {
-                        const created = await askQuestion({
-                          course: course.id,
-                          question: newQuestionText.trim(),
-                          is_public: true,
-                        })
-                        setQuestions((prev) => [
-                          {
-                            ...created,
-                            expand: {
-                              student: {
-                                id: user?.id || '',
-                                name: user?.name || 'Você',
-                              },
-                            },
-                          },
-                          ...prev,
-                        ])
-                        setNewQuestionText('')
-                        toast({
-                          title: 'Pergunta enviada!',
-                          description: 'O instrutor responderá sua dúvida em breve.',
-                        })
-                      } catch (err: any) {
-                        toast({ title: 'Erro ao enviar pergunta', variant: 'destructive' })
-                      } finally {
-                        setSubmittingQuestion(false)
-                      }
-                    }}
+                    onSubmit={handleAskQuestion}
                     className="p-3 bg-muted/40 rounded-xl border space-y-2"
                   >
                     <p className="text-xs font-semibold text-foreground">

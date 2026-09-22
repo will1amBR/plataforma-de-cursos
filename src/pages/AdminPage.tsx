@@ -377,7 +377,7 @@ export const AdminPage: React.FC = () => {
   // USER MANAGEMENT
   const handleUpdateUserRole = async (
     targetUserId: string,
-    newRole: 'admin' | 'moderator' | 'aluno',
+    newRole: 'admin' | 'moderator' | 'instructor' | 'aluno',
   ) => {
     try {
       await updateUserRoleAdmin(targetUserId, newRole)
@@ -1015,6 +1015,7 @@ export const AdminPage: React.FC = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="aluno">Aluno</SelectItem>
+                            <SelectItem value="instructor">Instrutor / Professor</SelectItem>
                             <SelectItem value="moderator">Moderador</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
