@@ -21,9 +21,11 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react'
-import { getTasksByCourse, getQuestionsByCourse, askQuestion, submitTask } from '@/services/teacher'
-import type { Task, CourseQuestion } from '@/types'
-import { ClipboardList, MessageSquare, Send, Calendar, ExternalLink } from 'lucide-react'
+import { getTasksByCourse, getQuestionsByCourse, askQuestion } from '@/services/teacher'
+import { submitStudentTask, getMySubmissionsForCourse, getTaskStatus } from '@/services/student'
+import { sendMessage } from '@/services/messages'
+import type { Task, TaskSubmission, CourseQuestion } from '@/types'
+import { ClipboardList, MessageSquare, Send, Calendar, X, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent } from '@/components/ui/card'
@@ -61,6 +63,12 @@ export const CoursePlayerPage: React.FC = () => {
   const [submissionContent, setSubmissionContent] = useState('')
   const [submissionUrl, setSubmissionUrl] = useState('')
   const [submittingTask, setSubmittingTask] = useState(false)
+  // Minhas entregas (por tarefa) — atualizadas na hora, sem recarregar a página
+  const [mySubmissions, setMySubmissions] = useState<Map<string, TaskSubmission>>(new Map())
+  // Mensagem direta para o professor
+  const [isInstructorDialogOpen, setIsInstructorDialogOpen] = useState(false)
+  const [instructorMessage, setInstructorMessage] = useState('')
+  const [sendingInstructorMessage, setSendingInstructorMessage] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -90,6 +98,7 @@ export const CoursePlayerPage: React.FC = () => {
         setLessons(lessonsData)
         setTasks(tasksData)
         setQuestions(questionsData)
+        await refreshMySubmissions(courseData.id)
 
         let enr = await getUserEnrollment(courseData.id)
         if (!enr) {
@@ -118,6 +127,23 @@ export const CoursePlayerPage: React.FC = () => {
   }, [slugOrId, isAuthenticated, navigate])
 
   const currentLesson = lessons[currentLessonIndex] || null
+
+  // Recarrega as entregas do aluno para as tarefas deste curso (status "na hora")
+  const refreshMySubmissions = async (courseId: string) => {
+    if (!courseId) return
+    try {
+      const subs = await getMySubmissionsForCourse(courseId)
+      const map = new Map<string, TaskSubmission>()
+      subs.forEach((s) => map.set(s.task, s))
+      setMySubmissions(map)
+    } catch (err) {
+      console.warn('Error refreshing my submissions:', err)
+    }
+  }
+
+  // Professor do curso (id e nome) para o botão "Falar com o professor"
+  const instructorId = course?.expand?.instructor_id?.id || course?.instructor_id || ''
+  const instructorName = course?.expand?.instructor_id?.name || ''
 
   const isLessonCompleted = (lessonId: string): boolean => {
     return !!enrollment?.completed_lessons?.includes(lessonId)
@@ -174,7 +200,7 @@ export const CoursePlayerPage: React.FC = () => {
 
     setSubmittingTask(true)
     try {
-      await submitTask({
+      await submitStudentTask({
         task: selectedTaskToSubmit.id,
         content: submissionContent.trim(),
         attachment_url: submissionUrl.trim(),
@@ -182,6 +208,7 @@ export const CoursePlayerPage: React.FC = () => {
       setSelectedTaskToSubmit(null)
       setSubmissionContent('')
       setSubmissionUrl('')
+      if (course) await refreshMySubmissions(course.id)
       toast({
         title: 'Tarefa enviada com sucesso!',
         description: 'Sua entrega foi gravada e enviada para o professor.',
@@ -194,6 +221,31 @@ export const CoursePlayerPage: React.FC = () => {
       })
     } finally {
       setSubmittingTask(false)
+    }
+  }
+
+  const handleSendInstructorMessage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const recipientId = course?.expand?.instructor_id?.id || course?.instructor_id
+    if (!recipientId || !instructorMessage.trim() || sendingInstructorMessage) return
+
+    setSendingInstructorMessage(true)
+    try {
+      await sendMessage(recipientId, instructorMessage, user?.name)
+      setInstructorMessage('')
+      setIsInstructorDialogOpen(false)
+      toast({
+        title: 'Mensagem enviada!',
+        description: 'O professor do curso receberá sua mensagem na caixa de entrada dele.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao enviar mensagem',
+        description: err?.message || 'Tente novamente.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSendingInstructorMessage(false)
     }
   }
 
@@ -270,6 +322,18 @@ export const CoursePlayerPage: React.FC = () => {
               <Award className="w-3.5 h-3.5" />
               Curso Concluído
             </Badge>
+          )}
+
+          {instructorId && (
+            <Button
+              size="sm"
+              onClick={() => setIsInstructorDialogOpen(true)}
+              className="bg-[#DA291C] hover:bg-[#b81d12] text-white text-xs font-semibold rounded-xl h-8"
+              title="Enviar mensagem para o professor do curso"
+            >
+              <MessageSquare className="w-3.5 h-3.5 mr-1" />
+              Falar com o professor
+            </Button>
           )}
         </div>
       </div>
@@ -383,40 +447,96 @@ export const CoursePlayerPage: React.FC = () => {
                       Nenhuma tarefa atribuída a este curso.
                     </p>
                   ) : (
-                    tasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="p-4 border rounded-xl bg-muted/20 space-y-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-xs text-foreground">{task.title}</h4>
-                            <Badge className="bg-[#FFC72C] text-neutral-900 text-[10px] font-bold">
-                              Nota: {task.max_grade || 10}
-                            </Badge>
+                    tasks.map((task) => {
+                      const mySub = mySubmissions.get(task.id)
+                      const myStatus = getTaskStatus({ task, submission: mySub, status: 'pending' })
+                      return (
+                        <div
+                          key={task.id}
+                          className="p-4 border rounded-xl bg-muted/20 space-y-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-xs text-foreground">{task.title}</h4>
+                              <Badge className="bg-[#FFC72C] text-neutral-900 text-[10px] font-bold">
+                                Nota: {task.max_grade || 10}
+                              </Badge>
+                            </div>
+                            {task.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {task.description}
+                              </p>
+                            )}
+                            {task.due_date && (
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-primary" />
+                                Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
+                              </p>
+                            )}
                           </div>
-                          {task.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">
-                              {task.description}
-                            </p>
+
+                          {mySub && (
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              {mySub.attachment_url && (
+                                <a
+                                  href={mySub.attachment_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline inline-flex items-center gap-1"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> Anexo
+                                </a>
+                              )}
+                              {mySub.feedback && (
+                                <span className="line-clamp-1 italic">"{mySub.feedback}"</span>
+                              )}
+                            </div>
                           )}
-                          {task.due_date && (
-                            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-primary" />
-                              Prazo: {new Date(task.due_date).toLocaleDateString('pt-BR')}
-                            </p>
+
+                          {myStatus === 'pending' ? (
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedTaskToSubmit(task)}
+                              className="bg-primary hover:bg-primary/90 text-white text-xs shrink-0 rounded-xl"
+                            >
+                              Entregar Tarefa
+                            </Button>
+                          ) : (
+                            <div className="space-y-1 text-right shrink-0">
+                              <Badge
+                                className={
+                                  myStatus === 'graded'
+                                    ? 'bg-green-600 text-white text-[10px] font-bold'
+                                    : 'bg-amber-600 text-white text-[10px] font-bold'
+                                }
+                              >
+                                {myStatus === 'graded'
+                                  ? `Nota: ${mySub?.grade ?? '—'} / ${task.max_grade || 10}`
+                                  : 'Entregue'}
+                              </Badge>
+                              {mySub?.submitted_at && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  {myStatus === 'graded' ? 'Corrigida em' : 'Entregue em'}{' '}
+                                  {new Date(
+                                    mySub.graded_at || mySub.submitted_at || '',
+                                  ).toLocaleDateString('pt-BR')}
+                                </p>
+                              )}
+                              {myStatus === 'submitted' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setSelectedTaskToSubmit(task)}
+                                  className="text-[10px] h-7 shrink-0 rounded-xl"
+                                >
+                                  Reenviar entrega
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </div>
-
-                        <Button
-                          size="sm"
-                          onClick={() => setSelectedTaskToSubmit(task)}
-                          className="bg-primary hover:bg-primary/90 text-white text-xs shrink-0 rounded-xl"
-                        >
-                          Entregar Tarefa
-                        </Button>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               )}
@@ -630,6 +750,61 @@ export const CoursePlayerPage: React.FC = () => {
                 className="bg-primary hover:bg-primary/90 text-white font-semibold"
               >
                 {submittingTask ? 'Enviando...' : 'Confirmar Entrega'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: FALAR COM O PROFESSOR */}
+      <Dialog
+        open={isInstructorDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsInstructorDialogOpen(false)
+            setInstructorMessage('')
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <form onSubmit={handleSendInstructorMessage}>
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                Falar com o professor
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 py-3">
+              <p className="text-xs text-muted-foreground">
+                {instructorName
+                  ? `Sua mensagem será entregue na caixa de entrada de ${instructorName}.`
+                  : 'Sua mensagem será entregue na caixa de entrada do professor deste curso.'}
+              </p>
+              <Textarea
+                placeholder="Escreva sua mensagem para o professor..."
+                value={instructorMessage}
+                onChange={(e) => setInstructorMessage(e.target.value)}
+                className="text-xs min-h-[110px]"
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsInstructorDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={sendingInstructorMessage || !instructorMessage.trim()}
+                className="bg-[#DA291C] hover:bg-[#b81d12] text-white font-semibold"
+              >
+                <Send className="w-3.5 h-3.5 mr-1" />
+                {sendingInstructorMessage ? 'Enviando...' : 'Enviar Mensagem'}
               </Button>
             </DialogFooter>
           </form>

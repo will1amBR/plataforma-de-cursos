@@ -79,6 +79,32 @@ export const getStudentTasks = async (): Promise<StudentTaskItem[]> => {
   }
 }
 
+/**
+ * Busca a(s) entrega(s) do aluno logado para as tarefas de UM curso específico
+ * (usado no player de aula para refletir o status sem recarregar a página).
+ */
+export const getMySubmissionsForCourse = async (courseId: string): Promise<TaskSubmission[]> => {
+  const currentUserId = pb.authStore.record?.id
+  if (!currentUserId || !courseId) return []
+
+  try {
+    const tasks = await pb.collection('tasks').getFullList<{ id: string }>({
+      filter: `course = "${courseId}"`,
+    })
+    if (tasks.length === 0) return []
+
+    const subsFilter = tasks.map((t) => `task = "${t.id}"`).join(' || ')
+    return await pb.collection('task_submissions').getFullList<TaskSubmission>({
+      filter: `student = "${currentUserId}" && (${subsFilter})`,
+      sort: '-created',
+      expand: 'task,graded_by',
+    })
+  } catch (err) {
+    console.warn('Error fetching my submissions for course:', err)
+    return []
+  }
+}
+
 /** Envia (ou reenvia) a entrega de uma tarefa do aluno. */
 export const submitStudentTask = async (params: {
   task: string

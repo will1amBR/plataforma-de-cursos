@@ -34,9 +34,10 @@ const notifyRecipient = async (message: MessageRecord, senderName: string) => {
     const recipient = await pb.collection('users').getOne(message.recipient_id)
     const snippet =
       message.content.length > 90 ? `${message.content.slice(0, 90)}…` : message.content
+    // Rotas reais do app: aluno → /profile (tab em inglês), professor → /professor (tab em português)
     const link = isInstructorRecord(recipient.role)
       ? '/professor?tab=mensagens'
-      : '/perfil?tab=mensagens'
+      : '/profile?tab=messages'
     await pb.collection('notifications').create({
       user_id: message.recipient_id,
       type: 'message',
