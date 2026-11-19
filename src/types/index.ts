@@ -201,6 +201,29 @@ export interface SupportTicket extends RecordModel {
   response?: string
 }
 
+export interface Message extends RecordModel {
+  sender_id: string
+  recipient_id: string
+  content: string
+  read?: boolean
+  expand?: {
+    sender_id?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+      role?: string
+    }
+    recipient_id?: {
+      id: string
+      name?: string
+      email?: string
+      avatar?: string
+      role?: string
+    }
+  }
+}
+
 export interface CourseQuestion extends RecordModel {
   course: string
   student: string
