@@ -65,6 +65,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { toast } from '@/components/ui/use-toast'
 import { RMHCLogo } from '@/components/RMHCLogo'
+import { MessagesPanel } from '@/components/MessagesPanel'
 
 export const TeacherPage: React.FC = () => {
   const { user, isInstructor, isAdmin, isAuthenticated, refreshUser, getUserAvatarUrl } = useAuth()
@@ -416,7 +417,7 @@ export const TeacherPage: React.FC = () => {
 
       {/* Main Tabs Navigation */}
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-12 p-1 bg-muted/80 rounded-2xl">
+        <TabsList className="grid grid-cols-2 md:grid-cols-5 h-12 p-1 bg-muted/80 rounded-2xl">
           <TabsTrigger value="dashboard" className="text-xs font-semibold gap-1.5 rounded-xl">
             <GraduationCap className="w-3.5 h-3.5" />
             Painel Geral
@@ -428,6 +429,10 @@ export const TeacherPage: React.FC = () => {
           <TabsTrigger value="questions" className="text-xs font-semibold gap-1.5 rounded-xl">
             <MessageSquare className="w-3.5 h-3.5" />
             Perguntas dos Alunos ({questions.length})
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="text-xs font-semibold gap-1.5 rounded-xl">
+            <Send className="w-3.5 h-3.5" />
+            Mensagens
           </TabsTrigger>
           <TabsTrigger value="profile" className="text-xs font-semibold gap-1.5 rounded-xl">
             <UserCheck className="w-3.5 h-3.5" />
@@ -825,6 +830,25 @@ export const TeacherPage: React.FC = () => {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* TAB: MENSAGENS */}
+        <TabsContent value="messages" className="space-y-6">
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Send className="w-4 h-4 text-primary" />
+                Mensagens dos Alunos
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Converse diretamente com os alunos dos seus cursos. Novas mensagens de alunos
+                aparecem aqui.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MessagesPanel selfLink="/professor?tab=mensagens" />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* TAB 4: PERFIL DO PROFESSOR */}

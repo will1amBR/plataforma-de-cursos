@@ -3,13 +3,18 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { getUserEnrollments } from '@/services/courses'
 import { getUserCertificates, getUserAchievements, getUserNotifications } from '@/services/user'
-import { getStudentSubmissions, getStudentQuestions, submitTask } from '@/services/teacher'
+import {
+  getStudentTasks,
+  getTaskStatus,
+  getStudentQuestions,
+  type StudentTaskItem,
+} from '@/services/student'
+import { MessagesPanel } from '@/components/MessagesPanel'
 import type {
   Enrollment,
   Certificate,
   AchievementItem,
   NotificationItem,
-  TaskSubmission,
   CourseQuestion,
 } from '@/types'
 import { getCourseThumbnailUrl } from '@/types'
@@ -39,6 +44,7 @@ import {
   Lock,
   XCircle,
   FileCheck,
+  Mail,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -61,7 +67,7 @@ export const ProfilePage: React.FC = () => {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [certificates, setCertificates] = useState<Certificate[]>([])
   const [achievements, setAchievements] = useState<AchievementItem[]>([])
-  const [submissions, setSubmissions] = useState<TaskSubmission[]>([])
+  const [studentTasks, setStudentTasks] = useState<StudentTaskItem[]>([])
   const [questions, setQuestions] = useState<CourseQuestion[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -93,13 +99,13 @@ export const ProfilePage: React.FC = () => {
           getUserEnrollments(),
           getUserCertificates(),
           getUserAchievements(),
-          getStudentSubmissions(),
+          getStudentTasks(),
           getStudentQuestions(),
         ])
         setEnrollments(enr)
         setCertificates(cert)
         setAchievements(ach)
-        setSubmissions(subs)
+        setStudentTasks(subs)
         setQuestions(qs)
       } catch (err) {
         console.error('Error fetching profile data:', err)
@@ -299,14 +305,14 @@ export const ProfilePage: React.FC = () => {
 
       {/* Main Tabs Container */}
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 h-auto p-1 bg-muted/80 rounded-2xl gap-1">
+        <TabsList className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 h-auto p-1 bg-muted/80 rounded-2xl gap-1">
           <TabsTrigger value="courses" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <BookOpen className="w-3.5 h-3.5" />
             Cursos ({enrollments.length})
           </TabsTrigger>
           <TabsTrigger value="tasks" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <ClipboardList className="w-3.5 h-3.5" />
-            Tarefas ({submissions.length})
+            Tarefas ({studentTasks.length})
           </TabsTrigger>
           <TabsTrigger value="questions" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <MessageSquare className="w-3.5 h-3.5" />
@@ -329,6 +335,10 @@ export const ProfilePage: React.FC = () => {
           <TabsTrigger value="settings" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
             <Settings className="w-3.5 h-3.5" />
             Perfil & Senha
+          </TabsTrigger>
+          <TabsTrigger value="messages" className="text-xs font-semibold gap-1.5 rounded-xl py-2">
+            <Mail className="w-3.5 h-3.5" />
+            Mensagens
           </TabsTrigger>
         </TabsList>
 
@@ -415,13 +425,13 @@ export const ProfilePage: React.FC = () => {
 
         {/* TAB 2: MINHAS TAREFAS */}
         <TabsContent value="tasks" className="space-y-4">
-          {submissions.length === 0 ? (
+          {studentTasks.length === 0 ? (
             <Card className="p-12 text-center border-dashed">
               <ClipboardList className="w-12 h-12 text-primary/40 mx-auto mb-3" />
-              <h3 className="font-bold text-base">Nenhuma entrega de tarefa realizada</h3>
+              <h3 className="font-bold text-base">Nenhuma tarefa encontrada</h3>
               <p className="text-xs text-muted-foreground mt-1 mb-4 max-w-sm mx-auto">
-                Acesse a sala de aula de um dos seus cursos e veja a aba "Tarefas" para enviar seus
-                exercícios.
+                As tarefas dos seus cursos aparecerão aqui — inclusive as que ainda estão pendentes
+                de entrega.
               </p>
               <Button asChild size="sm" className="bg-primary text-white">
                 <Link to="/courses">Ir para os Cursos</Link>
@@ -429,46 +439,56 @@ export const ProfilePage: React.FC = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {submissions.map((sub) => {
-                const isGraded = sub.grade !== undefined && sub.grade !== null
+              {studentTasks.map((item) => {
+                const task = item.task
+                const sub = item.submission
+                const course = task.expand?.course
+                const courseLink = `/courses/${course?.slug || course?.id || task.course}`
+                const status = getTaskStatus(item)
+                const isGraded = status === 'graded'
                 return (
-                  <Card key={sub.id} className="border shadow-sm p-5 space-y-3">
+                  <Card key={task.id} className="border shadow-sm p-5 space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <Badge variant="outline" className="text-[10px]">
-                          {sub.expand?.task?.expand?.course?.title || 'Curso'}
-                        </Badge>
-                        <h4 className="font-bold text-sm text-foreground mt-1">
-                          {sub.expand?.task?.title || 'Tarefa do Curso'}
-                        </h4>
+                      <div className="min-w-0">
+                        <Link to={courseLink} className="inline-block">
+                          <Badge variant="outline" className="text-[10px] hover:bg-muted">
+                            {course?.title || 'Curso'}
+                          </Badge>
+                        </Link>
+                        <h4 className="font-bold text-sm text-foreground mt-1">{task.title}</h4>
                         <p className="text-[11px] text-muted-foreground">
-                          Entregue em:{' '}
-                          {sub.submitted_at
-                            ? new Date(sub.submitted_at).toLocaleDateString('pt-BR')
-                            : 'Recentemente'}
+                          {sub?.submitted_at
+                            ? `Entregue em: ${new Date(sub.submitted_at).toLocaleDateString('pt-BR')}`
+                            : task.due_date
+                              ? `Prazo: ${new Date(task.due_date).toLocaleDateString('pt-BR')}`
+                              : 'Sem entrega ainda'}
                         </p>
                       </div>
                       <Badge
                         className={
                           isGraded
                             ? 'bg-green-600 text-white text-xs font-bold'
-                            : 'bg-amber-600 text-white text-xs'
+                            : status === 'submitted'
+                              ? 'bg-amber-600 text-white text-xs'
+                              : 'bg-red-600 text-white text-xs'
                         }
                       >
                         {isGraded
-                          ? `Nota: ${sub.grade} / ${sub.expand?.task?.max_grade || 10}`
-                          : 'Em correção'}
+                          ? `Nota: ${sub?.grade} / ${task.max_grade || 10}`
+                          : status === 'submitted'
+                            ? 'Em correção'
+                            : 'Pendente'}
                       </Badge>
                     </div>
 
-                    {sub.content && (
+                    {sub?.content && (
                       <div className="p-3 bg-muted/40 rounded-xl text-xs space-y-1">
                         <span className="font-semibold text-foreground">Sua resposta enviada:</span>
                         <p className="text-muted-foreground line-clamp-3">{sub.content}</p>
                       </div>
                     )}
 
-                    {sub.attachment_url && (
+                    {sub?.attachment_url && (
                       <div className="text-xs">
                         <a
                           href={sub.attachment_url}
@@ -481,7 +501,7 @@ export const ProfilePage: React.FC = () => {
                       </div>
                     )}
 
-                    {isGraded && sub.feedback && (
+                    {isGraded && sub?.feedback && (
                       <div className="p-3 bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 rounded-xl text-xs space-y-1">
                         <span className="font-bold text-green-800 dark:text-green-300">
                           Feedback do Professor:
@@ -491,6 +511,25 @@ export const ProfilePage: React.FC = () => {
                         </p>
                       </div>
                     )}
+
+                    <Button
+                      asChild
+                      size="sm"
+                      variant={status === 'pending' ? 'default' : 'outline'}
+                      className={
+                        status === 'pending'
+                          ? 'bg-primary hover:bg-primary/90 text-white text-xs w-fit'
+                          : 'text-xs w-fit'
+                      }
+                    >
+                      <Link to={`${courseLink}/learn`}>
+                        {status === 'pending'
+                          ? 'Entregar Tarefa'
+                          : status === 'submitted'
+                            ? 'Ver no Curso'
+                            : 'Revisar no Curso'}
+                      </Link>
+                    </Button>
                   </Card>
                 )
               })}
@@ -514,9 +553,25 @@ export const ProfilePage: React.FC = () => {
                 <Card key={q.id} className="border shadow-sm p-5 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <Badge variant="outline" className="text-[10px]">
-                        {q.expand?.course?.title || 'Curso'}
-                      </Badge>
+                      {(() => {
+                        const c = q.expand?.course
+                        const courseLink = `/courses/${c?.slug || c?.id || q.course}`
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <Link to={courseLink} className="inline-block">
+                              <Badge variant="outline" className="text-[10px] hover:bg-muted">
+                                {c?.title || 'Curso'}
+                              </Badge>
+                            </Link>
+                            <Link
+                              to={courseLink}
+                              className="text-primary hover:underline inline-flex items-center gap-1 text-[10px] font-semibold"
+                            >
+                              Ver curso <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </div>
+                        )
+                      })()}
                       <p className="text-[11px] text-muted-foreground mt-1">
                         Enviada em {new Date(q.created).toLocaleDateString('pt-BR')}
                       </p>
@@ -848,6 +903,24 @@ export const ProfilePage: React.FC = () => {
                   {updatingPass ? 'Alterando...' : 'Atualizar Senha'}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB 6: MENSAGENS */}
+        <TabsContent value="messages" className="space-y-4">
+          <Card className="border shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Mail className="w-4 h-4 text-primary" />
+                Mensagens
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Converse com os professores dos seus cursos diretamente por aqui.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MessagesPanel selfLink="/profile?tab=messages" />
             </CardContent>
           </Card>
         </TabsContent>
